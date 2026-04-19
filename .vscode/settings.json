@@ -1,0 +1,12 @@
+{
+  "python.defaultInterpreterPath": "/Users/snandi/Library/CloudStorage/GoogleDrive-snandi1603@gmail.com/My Drive/AmazonInterview/Kiro/AmazonCoding/.env/bin/python",
+  "python.linting.enabled": true,
+  "python.linting.pylintEnabled": true,
+  "python-envs.pythonProjects": [
+    {
+      "path": ".",
+      "envManager": "ms-python.python:venv",
+      "packageManager": "ms-python.python:pip"
+    }
+  ]
+}
