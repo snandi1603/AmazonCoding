@@ -34,13 +34,10 @@ class TaskScheduler:
         self.now = end_time
 
     def peek(self) -> str:
-        if self.curr_task:
-            return self.curr_task.name
-        return self.idle_queue[0][1] if self.idle_queue else None
-        pass
+        return self.curr_task.name if self.curr_task else self.idle_queue[0][1] if self.idle_queue else None
+
     def getCompleted(self) -> list[str]:
         return self.completed_tasks
-        
     
     
 # ─── Test runner ─────────────────────────────────────────────────────────────
