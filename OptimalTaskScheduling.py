@@ -19,21 +19,18 @@ class TaskScheduler:
     def run_current_task(self, end_time):
         if not self.curr_task:
             return True
-        if self.curr_task and self.curr_task.start_time + self.curr_task.duration <= end_time:
-            self.now = self.curr_task.start_time + self.curr_task.duration
-            self.completed_tasks.append(self.curr_task.name)
-            self.curr_task = None
-            return True
-        return False
+        if self.curr_task.start_time + self.curr_task.duration > end_time:
+            return False
+        self.now = self.curr_task.start_time + self.curr_task.duration
+        self.completed_tasks.append(self.curr_task.name)
+        self.curr_task = None
+        return True
     
     def tick(self, n):
         end_time = self.now + n
-        if self.run_current_task(end_time):
-            while self.now<end_time and self.idle_queue:
-                _, _, self.curr_task = heapq.heappop(self.idle_queue)
-                self.curr_task.start_time = self.now
-                if not self.run_current_task(end_time):
-                    break
+        while self.now<end_time and self.run_current_task(end_time) and self.idle_queue:
+            _, _, self.curr_task = heapq.heappop(self.idle_queue)
+            self.curr_task.start_time = self.now
         self.now = end_time
 
     def peek(self) -> str:
