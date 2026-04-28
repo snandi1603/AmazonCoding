@@ -1,4 +1,3 @@
-import heapq
 from collections import defaultdict
 import unittest
 class Team:
