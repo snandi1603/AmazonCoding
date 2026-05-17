@@ -1,0 +1,508 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>🧹 Logical & Maintainable Quiz</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/react/18.2.0/umd/react.production.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.2.0/umd/react-dom.production.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/babel-standalone/7.23.2/babel.min.js"></script>
+<style>*{margin:0;padding:0;box-sizing:border-box;}body{background:#0f1117;}::-webkit-scrollbar{width:6px;}::-webkit-scrollbar-track{background:#1a1d27;}::-webkit-scrollbar-thumb{background:#FF669255;border-radius:3px;}pre{white-space:pre-wrap;word-break:break-word;}</style>
+</head>
+<body>
+<div id="root"></div>
+<script type="text/babel">
+const { useState } = React;
+
+const PROBLEMS = [
+  {
+    id: 1,
+    title: "Check Similar Passwords",
+    source: "Amazon OA 2026",
+    difficulty: "Medium",
+    focus: "Rule decomposition — each rule as its own helper",
+    desc: `Given a list of passwords, return all pairs (i, j) with i < j where the two passwords are considered "similar" under ANY of the following rules:
+
+Rule 1 – Case-insensitive match: passwords are equal ignoring case.
+Rule 2 – Prefix match: one password is a prefix of the other, and they differ by at most K characters in length.
+Rule 3 – Single-char class substitution: passwords differ in exactly one position, and the differing characters both belong to the same character class (vowels: aeiou, digits: 0-9, consonants: all other letters).
+
+Return list of (password_i, password_j) pairs. Order doesn't matter.`,
+    example: `passwords = ["Hello", "hello", "Hell", "world", "w0rld"]
+K = 2
+
+Pairs:
+("Hello","hello") → Rule 1 (case-insensitive)
+("Hello","Hell")  → Rule 2 (prefix, diff=1 ≤ K)
+("hello","Hell")  → Rule 2 (prefix, diff=1 ≤ K)
+("world","w0rld") → Rule 3 (differ at pos 1: 'o' vs '0' — different classes, NOT similar)
+
+Output: [("Hello","hello"), ("Hello","Hell"), ("hello","Hell")]`,
+    constraints: `• 1 ≤ len(passwords) ≤ 500
+• 1 ≤ len(password) ≤ 100
+• K ≥ 0
+• All passwords contain only printable ASCII characters`,
+    amazon_signal: "Write separate helper functions: is_case_insensitive_match(a,b), is_prefix_within_tolerance(a,b,k), differs_by_one_allowed_char(a,b). The main function only calls these helpers. NO inline boolean soup.",
+    bad_example: `# ❌ BAD — what Amazon penalizes:
+def findSimilar(passwords, k):
+    result = []
+    for i in range(len(passwords)):
+        for j in range(i+1, len(passwords)):
+            a, b = passwords[i], passwords[j]
+            if a.lower()==b.lower() or (a.lower().startswith(b.lower()) and len(a)-len(b)<=k) or (b.lower().startswith(a.lower()) and len(b)-len(a)<=k) or (len(a)==len(b) and sum(1 for x,y in zip(a,b) if x!=y)==1 and ((a[next(i for i,(x,y) in enumerate(zip(a,b)) if x!=y)] in 'aeiouAEIOU') == (b[next(i for i,(x,y) in enumerate(zip(a,b)) if x!=y)] in 'aeiouAEIOU'))):
+                result.append((passwords[i], passwords[j]))
+    return result`,
+    hint: "Three standalone helpers: is_case_insensitive_match returns a.lower()==b.lower(). is_prefix_within_tolerance checks startswith and abs(len diff)<=k. differs_by_one_allowed_char finds the differing position and checks char_class(a[i])==char_class(b[i]).",
+  },
+  {
+    id: 2,
+    title: "Process Queries on Cart",
+    source: "Amazon OA 2026",
+    difficulty: "Medium",
+    focus: "Command-pattern dispatcher — no long if/elif chains",
+    desc: `You are given a shopping cart and a list of query strings. Each query is one of:
+  • ADD <itemId> <qty> <price>
+  • REMOVE <itemId> <qty>
+  • APPLY_COUPON <code>
+  • CHECKOUT
+
+Coupon codes:
+  • "SAVE10" — 10% off total
+  • "FREESHIP" — waive shipping fee ($5.99 flat)
+  • "BOGO" — buy-one-get-one: halve quantity of cheapest item's effective price
+
+Process queries in order. Return final cart state as:
+  {items: Dict[itemId→{qty,price}], subtotal, discount, shipping, total}`,
+    example: `queries = [
+    "ADD apple 3 1.50",
+    "ADD bread 2 2.00",
+    "REMOVE apple 1",
+    "APPLY_COUPON SAVE10",
+    "CHECKOUT"
+]
+
+Cart after ADD/REMOVE:
+  apple: qty=2, price=1.50  → $3.00
+  bread: qty=2, price=2.00  → $4.00
+  subtotal = $7.00
+SAVE10: discount = $0.70
+shipping = $5.99
+total = $7.00 - $0.70 + $5.99 = $12.29`,
+    constraints: `• 1 ≤ queries ≤ 1000
+• qty is a positive integer
+• price is a positive float
+• REMOVE of more than available qty sets qty to 0 (don't go negative)
+• Multiple coupons can be applied (stack discounts)
+• CHECKOUT finalizes the cart (subsequent queries are ignored)`,
+    amazon_signal: "Use a dispatcher dict: HANDLERS = {'ADD': handle_add, 'REMOVE': handle_remove, 'APPLY_COUPON': handle_coupon, 'CHECKOUT': handle_checkout}. Each handler is a separate function. No if/elif chain in process_query().",
+    bad_example: `# ❌ BAD — what Amazon penalizes:
+def processCart(queries):
+    items = {}
+    discount = 0
+    for q in queries:
+        parts = q.split()
+        if parts[0] == "ADD":
+            if parts[1] in items:
+                items[parts[1]]['qty'] += int(parts[2])
+            else:
+                items[parts[1]] = {'qty': int(parts[2]), 'price': float(parts[3])}
+        elif parts[0] == "REMOVE":
+            if parts[1] in items:
+                items[parts[1]]['qty'] = max(0, items[parts[1]]['qty'] - int(parts[2]))
+        elif parts[0] == "APPLY_COUPON":
+            if parts[1] == "SAVE10":
+                discount += 0.10 * sum(v['qty']*v['price'] for v in items.values())
+            # ... 20 more lines of elif
+        elif parts[0] == "CHECKOUT":
+            break`,
+    hint: "CartState dataclass holds items dict + applied_coupons list. handle_add(state, parts), handle_remove(state, parts), handle_coupon(state, parts) are pure functions. HANDLERS dict maps command → function. process_query calls HANDLERS[cmd](state, parts).",
+  },
+  {
+    id: 3,
+    title: "Checksum Logic Validator",
+    source: "Amazon OA 2026",
+    difficulty: "Hard",
+    focus: "Multi-step formula with precise rule ordering",
+    desc: `Implement a checksum validator for package tracking codes. A valid tracking code must pass ALL of the following checks in order:
+
+Step 1 – Length check: code must be exactly 16 characters.
+Step 2 – Character check: first 2 chars are uppercase letters, next 10 are digits, last 4 are uppercase letters.
+Step 3 – Digit sum check: sum of all 10 digits must be divisible by 7.
+Step 4 – Letter checksum: convert each letter (A=1…Z=26), sum all 6 letters, then verify last digit of that sum equals the 10th digit of the code.
+Step 5 – Parity check: count of odd digits must equal count of even digits (each 5).
+
+Return a ValidationResult with: is_valid (bool) and failed_step (int, 0 if valid).
+
+IMPORTANT: Steps must be checked in order. Stop at first failure and report that step.`,
+    example: `validate("AB1234567890CDEF")
+Step 1: len=16 ✓
+Step 2: AB=letters, 1234567890=digits, CDEF=letters ✓
+Step 3: 1+2+3+4+5+6+7+8+9+0=45, 45%7=3 ✗
+→ ValidationResult(is_valid=False, failed_step=3)
+
+validate("AB0000000007ABGA")
+Step 1: ✓, Step 2: ✓
+Step 3: sum=7, 7%7=0 ✓
+Step 4: A+B+A+B+G+A = 1+2+1+2+7+1=14, last digit=4, 10th digit='7' → 4≠7 ✗
+→ ValidationResult(is_valid=False, failed_step=4)`,
+    constraints: `• Input is a string of printable ASCII
+• Function must return ValidationResult(is_valid, failed_step)
+• failed_step is 0 when is_valid is True
+• Steps must be checked strictly in order 1→5`,
+    amazon_signal: "Each step is its own private method: _check_length, _check_character_format, _check_digit_sum, _check_letter_checksum, _check_parity. validate() calls them in order, returns early on first failure. No nested if-else pyramid.",
+    bad_example: `# ❌ BAD — what Amazon penalizes:
+def validate(code):
+    if len(code)==16:
+        if code[:2].isupper() and code[2:12].isdigit() and code[12:].isupper():
+            if sum(int(d) for d in code[2:12]) % 7 == 0:
+                letter_sum = sum(ord(c)-64 for c in code[:2]+code[12:])
+                if str(letter_sum)[-1] == code[11]:
+                    odds = sum(1 for d in code[2:12] if int(d)%2!=0)
+                    if odds == 5:
+                        return (True, 0)
+                    return (False, 5)
+                return (False, 4)
+            return (False, 3)
+        return (False, 2)
+    return (False, 1)`,
+    hint: "ValidationResult = namedtuple('ValidationResult', ['is_valid','failed_step']). class TrackingCodeValidator with _check_length(code), _check_character_format(code), etc. validate() runs [self._check_length, self._check_character_format, ...] in a loop.",
+  },
+  {
+    id: 4,
+    title: "Count Distinct Passwords",
+    source: "Amazon OA 2026",
+    difficulty: "Medium",
+    focus: "Combinatorics with clean case handling",
+    desc: `Count the number of distinct valid passwords that can be formed from a character pool under given rules:
+
+Given:
+  • pool: string of available characters (may have duplicates)
+  • length: required password length
+  • rules: list of (rule_type, value) where rule_type is one of:
+      - "min_upper": at least value uppercase letters
+      - "min_digit": at least value digits
+      - "no_repeat": no character may appear more than value times
+      - "starts_with": password must start with value (a specific character)
+
+Return the count of distinct valid passwords of exactly \`length\` characters drawn from pool (characters can be reused unless no_repeat says otherwise).`,
+    example: `pool = "aAbB12"  (a,A,b,B,1,2 — 6 distinct chars)
+length = 3
+rules = [("min_upper", 1), ("min_digit", 1)]
+
+Count all 3-char strings from {a,A,b,B,1,2} with ≥1 uppercase AND ≥1 digit.
+Total = 6^3 = 216
+Subtract: no uppercase (4^3=64) + no digit (4^3=64) - neither (2^3=8)
+By inclusion-exclusion: 216 - 64 - 64 + 8 = 96`,
+    constraints: `• 1 ≤ len(pool) ≤ 52 (letters + digits)
+• 1 ≤ length ≤ 10
+• Rules are applied conjunctively (ALL must be satisfied)
+• Pool duplicates are de-duplicated before counting`,
+    amazon_signal: "Each rule is validated by its own helper: satisfies_min_upper(pwd, val), satisfies_min_digit(pwd, val), etc. A RuleChecker class holds all rules and exposes is_valid(password). Main counting function is separate from rule logic.",
+    bad_example: `# ❌ BAD — combinatorial mess with inline rule checks in a single function with no separation`,
+    hint: "De-duplicate pool first. For small lengths (≤10), generate all combinations and filter using RuleChecker.is_valid(). For larger cases, use inclusion-exclusion (complementary counting). RuleChecker has list of (type,value) and check(password) iterates cleanly.",
+  },
+  {
+    id: 5,
+    title: "Customer Package Weight Report (SQL)",
+    source: "Amazon OA 2026",
+    difficulty: "Medium",
+    focus: "GROUP BY + conditional SUM — clean query structure",
+    desc: `You have two tables:
+
+Customers(customer_id, name, region)
+Packages(package_id, customer_id, weight_kg, status)
+  status ∈ {'delivered','in_transit','returned'}
+
+Write a SQL query that returns, for each region, the following columns:
+  • region
+  • total_packages
+  • delivered_weight  (sum of weight for delivered packages)
+  • in_transit_weight (sum of weight for in_transit packages)
+  • returned_weight   (sum of weight for returned packages)
+  • avg_weight        (avg weight across ALL packages in region, rounded to 2 decimals)
+
+Only include regions with at least 5 packages total. Order by total_packages DESC.`,
+    example: `Customers:
+  1, Alice, West | 2, Bob, East | 3, Carol, West
+
+Packages:
+  P1,1,2.5,delivered | P2,1,3.0,in_transit | P3,2,1.5,delivered
+  P4,2,4.0,returned  | P5,3,2.0,delivered  | P6,3,1.0,delivered
+  ... (assume West has ≥5 packages)
+
+Result:
+region | total | delivered_wt | in_transit_wt | returned_wt | avg_wt
+West   |  ...  |    ...       |     ...       |    ...      |  ...`,
+    constraints: `• Use standard SQL (works in MySQL/PostgreSQL)
+• Use SUM(CASE WHEN ... END) pattern for conditional aggregation
+• HAVING clause for the ≥5 filter
+• ROUND to 2 decimal places for avg_weight`,
+    amazon_signal: "Clean query with clear aliases, consistent indentation, CASE WHEN for conditional sums, HAVING not WHERE for aggregate filter. Comments explaining non-obvious parts.",
+    bad_example: `-- ❌ BAD — cryptic aliases, subquery soup:
+SELECT r,COUNT(*),SUM(CASE WHEN s='delivered' THEN w END),SUM(CASE WHEN s='in_transit' THEN w END),SUM(CASE WHEN s='returned' THEN w END),ROUND(AVG(w),2) FROM Customers c JOIN Packages p ON c.customer_id=p.customer_id GROUP BY r HAVING COUNT(*)>=5 ORDER BY 2 DESC`,
+    hint: "JOIN Customers c ON c.customer_id = p.customer_id. GROUP BY c.region. SELECT c.region, COUNT(*) AS total_packages, SUM(CASE WHEN p.status='delivered' THEN p.weight_kg ELSE 0 END) AS delivered_weight ... HAVING COUNT(*) >= 5.",
+  },
+  {
+    id: 6,
+    title: "Rate Limiter with Clean State Management",
+    source: "Amazon OA Pattern",
+    difficulty: "Medium",
+    focus: "Guard clauses + single-responsibility + clear naming",
+    desc: `Implement a RateLimiter that supports multiple users with configurable limits.
+
+  • registerUser(userId, maxRequests, windowSeconds) — register a user with their rate limit config
+  • recordRequest(userId, timestamp) → bool — return True if request is allowed, False if rate limit exceeded
+  • getRemainingRequests(userId, currentTime) → int — how many requests user can still make in current window
+  • resetUser(userId) — clear all request history for user
+
+Rules:
+  • A user's window is sliding: only requests within the last windowSeconds count
+  • If userId not registered, raise UnregisteredUserError
+  • Multiple requests at the exact same timestamp all count individually`,
+    example: `rl = RateLimiter()
+rl.registerUser("alice", maxRequests=3, windowSeconds=60)
+
+rl.recordRequest("alice", timestamp=100)  → True   # 1/3
+rl.recordRequest("alice", timestamp=110)  → True   # 2/3
+rl.recordRequest("alice", timestamp=120)  → True   # 3/3
+rl.recordRequest("alice", timestamp=130)  → False  # limit hit
+rl.getRemainingRequests("alice", currentTime=161)  → 2  # ts=100,110 expired
+rl.recordRequest("alice", timestamp=161)  → True   # window slid`,
+    constraints: `• 1 ≤ maxRequests ≤ 1000
+• 1 ≤ windowSeconds ≤ 86400
+• timestamps are non-decreasing per user
+• Up to 10^4 recordRequest calls`,
+    amazon_signal: "UserRateConfig and UserRateState are separate dataclasses. RateLimiter has _validate_user(userId) guard called at top of every public method. _prune_expired_requests(userId, currentTime) is a private helper. No logic duplication across methods.",
+    bad_example: `# ❌ BAD — state mixed with logic, no guard clauses, cryptic names:
+def req(self,u,t):
+    if u in self.d:
+        self.d[u] = [x for x in self.d[u] if x > t-self.w[u]]
+        if len(self.d[u]) < self.m[u]:
+            self.d[u].append(t)
+            return True
+    return False`,
+    hint: "UserRateLimit = dataclass(max_requests, window_seconds, request_timestamps=[]). _validate_user raises UnregisteredUserError if userId not in self._users. _prune_expired(user, current_time) removes timestamps older than window. getRemainingRequests prunes then returns max_requests - len(timestamps).",
+  },
+  {
+    id: 7,
+    title: "Flight Itinerary Validator",
+    source: "Amazon OA Pattern",
+    difficulty: "Medium",
+    focus: "Rule decomposition + guard clauses + clear error reporting",
+    desc: `Validate a flight itinerary given a list of flight segments. Each segment has:
+  {flight_id, origin, destination, departure_time, arrival_time}
+
+Validation rules (check in order, report ALL failures):
+  Rule 1: No duplicate flight_ids
+  Rule 2: departure_time < arrival_time for every segment
+  Rule 3: Consecutive segments must connect (destination of segment N == origin of segment N+1)
+  Rule 4: No time overlap — arrival of segment N must be ≤ departure of segment N+1 (allow same minute for connection)
+  Rule 5: Total trip duration ≤ 48 hours
+
+Return ValidationReport(is_valid: bool, errors: List[str])`,
+    example: `segments = [
+  {flight_id:"AA100", origin:"JFK", dest:"LAX", dep:600, arr:900},
+  {flight_id:"AA100", origin:"LAX", dest:"SFO", dep:950, arr:1050},  # dup id!
+  {flight_id:"UA200", origin:"ORD", dest:"SEA", dep:1100, arr:1300}, # broken chain!
+]
+
+errors = [
+  "Rule 1: Duplicate flight_id AA100",
+  "Rule 3: Segment 2→3 disconnected: SFO → ORD",
+]
+ValidationReport(is_valid=False, errors=[...])`,
+    constraints: `• 1 ≤ segments ≤ 100
+• Times are integers (minutes since midnight)
+• Return ALL errors found, not just first
+• Segments are given in intended travel order`,
+    amazon_signal: "One method per rule: _check_duplicate_ids(), _check_time_directions(), _check_connectivity(), _check_no_overlap(), _check_total_duration(). validate() calls all 5 and collects errors. ValidationReport is a dataclass. No logic inside validate() itself.",
+    bad_example: `# ❌ BAD — monolithic validate() with nested loops and inline string building`,
+    hint: "ItineraryValidator(segments). validate() collects errors = []. For each rule method, extend(errors, self._check_X()). Each _check_X() returns a list of error strings. ValidationReport(is_valid=len(errors)==0, errors=errors).",
+  },
+  {
+    id: 8,
+    title: "Metrics Aggregator with Clean Separation",
+    source: "Amazon OA Pattern",
+    difficulty: "Medium",
+    focus: "Single-responsibility + meaningful names + no hidden state",
+    desc: `Build a MetricsAggregator for a monitoring system. Metrics arrive as (metric_name, value, timestamp) tuples.
+
+  • record(metricName, value, timestamp) — store a data point
+  • getStats(metricName, startTime, endTime) → Stats — return min, max, avg, count for time range
+  • getTopN(n, startTime, endTime) → List[str] — return top N metric names by average value in range
+  • getAnomaly(metricName, windowSize, threshold) → List[int] — return timestamps where value exceeds mean ± threshold*stddev in rolling window
+
+Stats = namedtuple('Stats', ['min','max','avg','count'])`,
+    example: `agg = MetricsAggregator()
+agg.record("cpu", 80, 100)
+agg.record("cpu", 90, 200)
+agg.record("cpu", 70, 300)
+agg.record("mem", 60, 100)
+
+agg.getStats("cpu", 100, 300)
+→ Stats(min=70, max=90, avg=80.0, count=3)
+
+agg.getTopN(1, 100, 300)
+→ ["cpu"]  # avg 80 > mem avg 60
+
+agg.getAnomaly("cpu", windowSize=3, threshold=1.0)
+→ []  # no point exceeds mean±1*std`,
+    constraints: `• Metric names are non-empty strings
+• Timestamps are positive integers (seconds)
+• getStats on unknown metric returns Stats(0,0,0.0,0)
+• 1 ≤ windowSize ≤ 1000`,
+    amazon_signal: "MetricSeries class owns data for one metric (list of (ts,val)) and exposes get_in_range(). MetricsAggregator owns dict of MetricSeries. StatsCalculator is a separate utility class with compute_stats(), compute_rolling_anomalies() as static methods.",
+    bad_example: `# ❌ BAD — one giant class where record(), getStats(), and getAnomaly() all directly manipulate the same raw dict with inline math`,
+    hint: "MetricSeries(name).add(value,ts). get_in_range(start,end) returns filtered [(ts,val)] list. StatsCalculator.compute(data_points) → Stats. MetricsAggregator.getStats delegates: series = self._get_series(name); data = series.get_in_range(...); return StatsCalculator.compute(data).",
+  },
+];
+
+function LogicalQuiz() {
+  const [answered, setAnswered] = useState({});
+  const [batchIdx, setBatchIdx] = useState(0);
+  const [expanded, setExpanded] = useState({});
+  const PER_BATCH = 2;
+  const totalBatches = Math.ceil(PROBLEMS.length/PER_BATCH);
+  const currentBatch = PROBLEMS.slice(batchIdx*PER_BATCH,(batchIdx+1)*PER_BATCH);
+  const mark = (id,s) => setAnswered(p=>({...p,[id]:s}));
+  const toggle = (id,k) => setExpanded(p=>({...p,[`${id}_${k}`]:!p[`${id}_${k}`]}));
+  const solved=Object.values(answered).filter(v=>v==="solved").length;
+  const unsolved=Object.values(answered).filter(v=>v==="unsolved").length;
+  const skipped=Object.values(answered).filter(v=>v==="skip").length;
+  const total_done=solved+unsolved+skipped;
+  const pct=Math.round((total_done/PROBLEMS.length)*100);
+  const allBatchDone=currentBatch.every(p=>answered[p.id]);
+
+  const S = {
+    app:{minHeight:"100vh",background:"linear-gradient(135deg,#0f1117,#1a1020)",color:"#e0e0e0",fontFamily:"'Segoe UI',Arial,sans-serif"},
+    hdr:{background:"#1a1d27",borderBottom:"1px solid #3a1d2a",padding:"14px 24px",display:"flex",alignItems:"center",justifyContent:"space-between",flexWrap:"wrap",gap:"10px",position:"sticky",top:0,zIndex:100},
+    main:{maxWidth:"900px",margin:"0 auto",padding:"22px 14px"},
+    card:s=>({background:s==="solved"?"#0f2a27":s==="unsolved"?"#2a0f13":s==="skip"?"#2a2008":"#1a1d27",borderRadius:"16px",padding:"22px",marginBottom:"18px",border:`1px solid ${s==="solved"?"#00b8a340":s==="unsolved"?"#ff375f40":s==="skip"?"#ffc01e40":"#3a1d2a"}`}),
+    badge:(bg,c)=>({background:bg,color:c,padding:"3px 10px",borderRadius:"6px",fontSize:"0.73rem",fontWeight:600,display:"inline-block"}),
+    btn:(border,bg,c)=>({padding:"7px 14px",borderRadius:"8px",border:`1px solid ${border}`,background:bg,color:c,cursor:"pointer",fontSize:"0.8rem",fontWeight:600}),
+    expandBtn:c=>({background:"none",border:`1px solid ${c}`,color:c,borderRadius:"6px",padding:"5px 12px",cursor:"pointer",fontSize:"0.78rem",fontWeight:600,marginRight:"8px",marginTop:"8px"}),
+    section:{marginTop:"12px",background:"#252836",borderRadius:"10px",padding:"14px 16px"},
+  };
+
+  return (
+    <div style={S.app}>
+      <div style={S.hdr}>
+        <div style={{fontSize:"1.1rem",fontWeight:700,color:"#fff",display:"flex",alignItems:"center",gap:"10px"}}>
+          🧹 Logical &amp; Maintainable
+          <span style={{fontSize:"0.75rem",color:"#888",fontWeight:400}}>{PROBLEMS.length} problems · Paste answers to Claude</span>
+        </div>
+        <div style={{display:"flex",gap:"10px",alignItems:"center"}}>
+          <div style={{background:"#252836",borderRadius:"20px",padding:"5px 14px",fontSize:"0.82rem",color:"#FF6692",fontWeight:600}}>
+            {total_done}/{PROBLEMS.length} done ({pct}%)
+          </div>
+          <div style={{background:"#252836",borderRadius:"8px",height:"6px",width:"120px",overflow:"hidden"}}>
+            <div style={{height:"100%",width:`${pct}%`,background:"linear-gradient(90deg,#FF6692,#AB63FA)",borderRadius:"8px",transition:"width 0.4s"}}/>
+          </div>
+        </div>
+      </div>
+
+      <div style={S.main}>
+        <div style={{background:"#1a1d27",borderRadius:"12px",padding:"14px 18px",marginBottom:"18px",border:"1px solid #3a1d2a",fontSize:"0.83rem",color:"#aaa",lineHeight:1.7}}>
+          <strong style={{color:"#FF6692"}}>🧹 How to use:</strong> Write clean, well-structured code — then paste it to Claude for review. This track scores you on <strong style={{color:"#fff"}}>code quality</strong>, not just correctness.
+          <br/><br/>
+          <strong style={{color:"#FECB52"}}>🎯 Amazon's checklist:</strong> Meaningful variable names · Short single-purpose functions · Guard clauses for edge cases · No duplicated logic · Complexity comment at end · Reads on the first pass
+          <br/><br/>
+          <strong style={{color:"#ff375f"}}>❌ Red flags that kill your score:</strong> One-letter variables · Long nested if/elif chains · Logic duplication · Missing edge cases · No complexity statement
+        </div>
+
+        <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:"16px",background:"#1a1d27",borderRadius:"12px",padding:"14px 18px",border:"1px solid #3a1d2a"}}>
+          <div>
+            <div style={{fontWeight:700,color:"#fff"}}>Batch {batchIdx+1} / {totalBatches}</div>
+            <div style={{fontSize:"0.83rem",color:"#aaa"}}>Problems {batchIdx*PER_BATCH+1}–{Math.min((batchIdx+1)*PER_BATCH,PROBLEMS.length)}</div>
+          </div>
+          <div style={{display:"flex",gap:"8px"}}>
+            <button style={{...S.btn("#FF6692","#1e1020","#FF6692"),opacity:batchIdx===0?0.3:1}} onClick={()=>batchIdx>0&&setBatchIdx(b=>b-1)}>← Prev</button>
+            <button style={{...S.btn("#00b8a3","#003d37","#00b8a3"),opacity:batchIdx>=totalBatches-1?0.3:1}} onClick={()=>batchIdx<totalBatches-1&&setBatchIdx(b=>b+1)}>Next →</button>
+          </div>
+        </div>
+
+        {currentBatch.map(p=>{
+          const status=answered[p.id];
+          const showFull=expanded[`${p.id}_full`];
+          const showHint=expanded[`${p.id}_hint`];
+          const showBad=expanded[`${p.id}_bad`];
+          const showSignal=expanded[`${p.id}_signal`];
+          return (
+            <div key={p.id} style={S.card(status)}>
+              <div style={{display:"flex",alignItems:"center",gap:"8px",marginBottom:"12px",flexWrap:"wrap"}}>
+                <span style={S.badge("#252836","#888")}>#{p.id}</span>
+                <span style={S.badge("#FF669222","#FF6692")}>🧹 Logical & Maintainable</span>
+                <span style={S.badge(p.difficulty==="Hard"?"#3d0010":"#3d2f00",p.difficulty==="Hard"?"#ff375f":"#ffc01e")}>{p.difficulty}</span>
+                <span style={S.badge("#AB63FA22","#AB63FA")}>{p.focus}</span>
+                <span style={{marginLeft:"auto",fontSize:"0.73rem",color:"#666"}}>{p.source}</span>
+                {status&&<span style={{fontSize:"1.1rem"}}>{status==="solved"?"✅":status==="unsolved"?"❌":"⏭️"}</span>}
+              </div>
+
+              <div style={{fontSize:"1.05rem",fontWeight:700,color:"#fff",marginBottom:"14px"}}>{p.title}</div>
+
+              <div style={{fontSize:"0.85rem",color:"#ccc",lineHeight:1.7,marginBottom:"12px",background:"#1e1535",borderRadius:"8px",padding:"12px 14px"}}>
+                {showFull ? p.desc : p.desc.split('\n').slice(0,5).join('\n')}
+                {!showFull&&<span style={{color:"#FF6692",cursor:"pointer",marginLeft:"6px"}} onClick={()=>toggle(p.id,'full')}>… read more</span>}
+              </div>
+
+              {showFull&&<>
+                <div style={S.section}>
+                  <div style={{fontWeight:700,color:"#FECB52",marginBottom:"8px",fontSize:"0.85rem"}}>📋 Example</div>
+                  <pre style={{fontSize:"0.8rem",color:"#ccc",background:"#0f1117",padding:"10px",borderRadius:"8px",overflowX:"auto"}}>{p.example}</pre>
+                </div>
+                <div style={{...S.section,marginTop:"10px"}}>
+                  <div style={{fontWeight:700,color:"#636EFA",marginBottom:"8px",fontSize:"0.85rem"}}>📐 Constraints</div>
+                  <pre style={{fontSize:"0.8rem",color:"#aaa"}}>{p.constraints}</pre>
+                </div>
+              </>}
+
+              <div style={{marginTop:"4px",display:"flex",flexWrap:"wrap",gap:"4px"}}>
+                <button style={S.expandBtn("#FF6692")} onClick={()=>toggle(p.id,'full')}>{showFull?"📕 Collapse":"📖 Full Problem"}</button>
+                <button style={S.expandBtn("#AB63FA")} onClick={()=>toggle(p.id,'hint')}>{showHint?"🙈 Hide Hint":"💡 Hint"}</button>
+                <button style={S.expandBtn("#ff375f")} onClick={()=>toggle(p.id,'bad')}>{showBad?"🙈 Hide":"❌ Bad Example"}</button>
+                <button style={S.expandBtn("#FECB52")} onClick={()=>toggle(p.id,'signal')}>{showSignal?"🙈 Hide":"🎯 Amazon Signal"}</button>
+              </div>
+
+              {showHint&&<div style={{marginTop:"10px",background:"#1e1535",borderRadius:"10px",padding:"12px 14px",borderLeft:"3px solid #AB63FA",fontSize:"0.83rem",color:"#ccc",lineHeight:1.6}}>
+                <strong style={{color:"#AB63FA"}}>💡 Clean approach: </strong>{p.hint}
+              </div>}
+              {showBad&&<div style={{marginTop:"10px",background:"#2a1015",borderRadius:"10px",padding:"12px 14px",borderLeft:"3px solid #ff375f",fontSize:"0.83rem"}}>
+                <div style={{fontWeight:700,color:"#ff375f",marginBottom:"8px"}}>❌ What Amazon penalizes:</div>
+                <pre style={{fontSize:"0.78rem",color:"#ffaaaa",background:"#1a0a0a",padding:"10px",borderRadius:"6px",overflowX:"auto"}}>{p.bad_example}</pre>
+              </div>}
+              {showSignal&&<div style={{marginTop:"10px",background:"#1e1535",borderRadius:"10px",padding:"12px 14px",borderLeft:"3px solid #FECB52",fontSize:"0.83rem",color:"#ccc",lineHeight:1.6}}>
+                <strong style={{color:"#FECB52"}}>🎯 Amazon wants to see: </strong>{p.amazon_signal}
+              </div>}
+
+              <div style={{marginTop:"14px",display:"flex",gap:"8px",flexWrap:"wrap"}}>
+                <button style={{...S.btn("#00b8a3",status==="solved"?"#005f4a":"#003d37","#00b8a3")}} onClick={()=>mark(p.id,"solved")}>✅ Solved</button>
+                <button style={{...S.btn("#ff375f",status==="unsolved"?"#5f0015":"#3d0010","#ff375f")}} onClick={()=>mark(p.id,"unsolved")}>❌ Review</button>
+                <button style={{...S.btn("#ffc01e",status==="skip"?"#5f4f00":"#3d3200","#ffc01e")}} onClick={()=>mark(p.id,"skip")}>⏭️ Skip</button>
+                <span style={{fontSize:"0.77rem",color:"#555",alignSelf:"center",marginLeft:"4px"}}>📋 Paste your solution to Claude to verify</span>
+              </div>
+            </div>
+          );
+        })}
+
+        {allBatchDone&&batchIdx<totalBatches-1&&(
+          <div style={{background:"#1a0f20",border:"1px solid #FF6692",borderRadius:"12px",padding:"16px",textAlign:"center",marginTop:"8px"}}>
+            <div style={{fontSize:"1rem",fontWeight:700,color:"#FF6692",marginBottom:"6px"}}>🎉 Batch {batchIdx+1} done!</div>
+            <button style={{...S.btn("#FF6692","#2a1020","#FF6692"),padding:"9px 26px"}} onClick={()=>{setBatchIdx(b=>b+1);window.scrollTo(0,0);}}>Next Batch →</button>
+          </div>
+        )}
+        {total_done===PROBLEMS.length&&(
+          <div style={{background:"linear-gradient(135deg,#1a0f20,#1a2d45)",border:"1px solid #FF6692",borderRadius:"14px",padding:"24px",textAlign:"center",marginTop:"16px"}}>
+            <div style={{fontSize:"2rem",marginBottom:"8px"}}>🏆</div>
+            <div style={{fontSize:"1.2rem",fontWeight:800,color:"#fff",marginBottom:"6px"}}>All {PROBLEMS.length} L&M problems done!</div>
+            <div style={{fontSize:"0.88rem",color:"#aaa"}}>{solved} solved · {unsolved} review · {skipped} skipped</div>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+ReactDOM.createRoot(document.getElementById("root")).render(<LogicalQuiz/>);
+</script>
+</body>
+</html>

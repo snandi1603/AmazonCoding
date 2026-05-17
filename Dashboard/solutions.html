@@ -1,0 +1,697 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>📚 Solutions Reference</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/react/18.2.0/umd/react.production.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.2.0/umd/react-dom.production.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/babel-standalone/7.23.2/babel.min.js"></script>
+<style>*{margin:0;padding:0;box-sizing:border-box;}body{background:#0f1117;}::-webkit-scrollbar{width:6px;}::-webkit-scrollbar-track{background:#1a1d27;}::-webkit-scrollbar-thumb{background:#636EFA55;border-radius:3px;}pre{white-space:pre-wrap;word-break:break-word;font-family:'Courier New',monospace;}</style>
+</head>
+<body>
+<div id="root"></div>
+<script type="text/babel">
+const { useState } = React;
+
+const SOLUTIONS = [
+  // ── CLASSES & MODULARIZATION ──
+  {
+    id: "C1", track: "Classes & Mod", title: "Team Ranking System",
+    code: `from dataclasses import dataclass, field
+from typing import Optional, Tuple
+
+@dataclass
+class Team:
+    name: str
+    wins: int = 0
+    losses: int = 0
+    points: int = 0
+
+    def ranking_key(self):
+        # Higher wins first, then points, then name alphabetically
+        return (-self.wins, -self.points, self.name)
+
+
+class League:
+    def __init__(self):
+        self._teams: dict[str, Team] = {}
+        self._best: Optional[Team] = None
+
+    def _get_or_create(self, name: str) -> Team:
+        if name not in self._teams:
+            self._teams[name] = Team(name=name)
+        return self._teams[name]
+
+    def _update_best(self, candidate: Team) -> None:
+        if self._best is None or candidate.ranking_key() < self._best.ranking_key():
+            self._best = candidate
+
+    def addMatch(self, teamA: str, teamB: str, scoreA: int, scoreB: int) -> None:
+        a = self._get_or_create(teamA)
+        b = self._get_or_create(teamB)
+
+        a.points += scoreA
+        b.points += scoreB
+
+        if scoreA > scoreB:
+            a.wins += 1
+            b.losses += 1
+            winner = a
+        else:
+            b.wins += 1
+            a.losses += 1
+            winner = b
+
+        self._update_best(winner)
+        # Also re-check if loser somehow beats current best (edge case on first match)
+        if self._best:
+            self._update_best(self._best)
+
+    def findFirst(self) -> Optional[str]:
+        # O(1) — cached during addMatch
+        return self._best.name if self._best else None
+
+    def getTeam(self, name: str) -> Tuple[int, int, int]:
+        if name not in self._teams:
+            raise KeyError(f"Team '{name}' not registered")
+        t = self._teams[name]
+        return (t.wins, t.losses, t.points)
+
+# Time: addMatch O(1), findFirst O(1), getTeam O(1)
+# Space: O(T) where T = number of distinct teams`
+  },
+  {
+    id: "C2", track: "Classes & Mod", title: "Optimal Task Scheduling",
+    code: `import heapq
+from dataclasses import dataclass, field
+from typing import List, Optional
+
+@dataclass(order=True)
+class Task:
+    priority: int
+    task_id: str = field(compare=True)
+    duration: int = field(compare=False)
+    remaining: int = field(compare=False, init=False)
+
+    def __post_init__(self):
+        self.remaining = self.duration
+
+    def is_complete(self) -> bool:
+        return self.remaining <= 0
+
+
+class TaskScheduler:
+    def __init__(self):
+        self._heap: List[tuple] = []          # (priority, task_id, Task)
+        self._current: Optional[Task] = None
+        self._completed: List[str] = []
+        self._clock: int = 0
+
+    def addTask(self, task_id: str, priority: int, duration: int) -> None:
+        task = Task(priority=priority, task_id=task_id, duration=duration)
+        heapq.heappush(self._heap, (priority, task_id, task))
+
+    def peek(self) -> Optional[str]:
+        if self._current:
+            return self._current.task_id
+        if self._heap:
+            return self._heap[0][2].task_id
+        return None
+
+    def tick(self, n: int) -> None:
+        time_left = n
+        while time_left > 0:
+            task = self._ensure_current_task()
+            if task is None:
+                break
+            run_for = min(time_left, task.remaining)
+            task.remaining -= run_for
+            time_left -= run_for
+            self._clock += run_for
+            if task.is_complete():
+                self._completed.append(task.task_id)
+                self._current = None
+
+    def getCompleted(self) -> List[str]:
+        return list(self._completed)
+
+    def _ensure_current_task(self) -> Optional[Task]:
+        if self._current is None and self._heap:
+            _, _, self._current = heapq.heappop(self._heap)
+        return self._current
+
+# Time: addTask O(log n), tick O(k log n) k=tasks completed, peek O(1)
+# Space: O(n)`
+  },
+  {
+    id: "C3", track: "Classes & Mod", title: "Server Instance Allocation & Cost",
+    code: `import heapq
+from dataclasses import dataclass
+from typing import Dict, Optional
+
+@dataclass
+class Server:
+    instance_id: str
+    server_type: str
+    hourly_cost: float
+
+
+class ServerPool:
+    def __init__(self):
+        # Per-type min-heap: (hourly_cost, instance_id)
+        self._idle_heaps: Dict[str, list] = {}
+        self._all_servers: Dict[str, Server] = {}
+        self._allocated: Dict[str, Server] = {}
+
+    def addServer(self, instance_id: str, server_type: str, hourly_cost: float) -> None:
+        server = Server(instance_id, server_type, hourly_cost)
+        self._all_servers[instance_id] = server
+        self._push_to_idle(server)
+
+    def allocate(self, server_type: str) -> str:
+        heap = self._get_heap(server_type)
+        while heap:
+            cost, instance_id = heapq.heappop(heap)
+            if instance_id in self._all_servers and instance_id not in self._allocated:
+                self._allocated[instance_id] = self._all_servers[instance_id]
+                return instance_id
+        raise ValueError(f"No idle servers of type '{server_type}' available")
+
+    def release(self, instance_id: str) -> None:
+        if instance_id not in self._allocated:
+            return  # no-op for non-allocated server
+        server = self._allocated.pop(instance_id)
+        self._push_to_idle(server)
+
+    def getCost(self, instance_id: str, hours: float) -> float:
+        if instance_id not in self._all_servers:
+            raise KeyError(f"Unknown server '{instance_id}'")
+        return self._all_servers[instance_id].hourly_cost * hours
+
+    def idleCount(self, server_type: str) -> int:
+        heap = self._get_heap(server_type)
+        return sum(
+            1 for _, iid in heap
+            if iid not in self._allocated
+        )
+
+    def _get_heap(self, server_type: str) -> list:
+        if server_type not in self._idle_heaps:
+            self._idle_heaps[server_type] = []
+        return self._idle_heaps[server_type]
+
+    def _push_to_idle(self, server: Server) -> None:
+        heap = self._get_heap(server.server_type)
+        heapq.heappush(heap, (server.hourly_cost, server.instance_id))
+
+# Time: addServer O(log n), allocate O(log n), release O(log n), getCost O(1)
+# Space: O(n)`
+  },
+  {
+    id: "C4", track: "Classes & Mod", title: "LRU Cache with Usage Analytics",
+    code: `from collections import OrderedDict, defaultdict
+from typing import List
+
+class CacheStore:
+    """Handles LRU eviction mechanics using an OrderedDict."""
+
+    def __init__(self, capacity: int):
+        self._capacity = capacity
+        self._store: OrderedDict[int, int] = OrderedDict()
+
+    def get(self, key: int) -> int:
+        if key not in self._store:
+            return -1
+        self._store.move_to_end(key)
+        return self._store[key]
+
+    def put(self, key: int, value: int) -> int:
+        """Returns evicted key (or -1 if no eviction)."""
+        evicted = -1
+        if key in self._store:
+            self._store.move_to_end(key)
+        else:
+            if len(self._store) >= self._capacity:
+                evicted, _ = self._store.popitem(last=False)
+            self._store[key] = value
+        return evicted
+
+
+class AccessTracker:
+    """Tracks hits, misses, evictions, and access frequency."""
+
+    def __init__(self):
+        self._hits = 0
+        self._misses = 0
+        self._evictions = 0
+        self._access_count: dict[int, int] = defaultdict(int)
+
+    def record_hit(self, key: int) -> None:
+        self._hits += 1
+        self._access_count[key] += 1
+
+    def record_miss(self) -> None:
+        self._misses += 1
+
+    def record_eviction(self, key: int) -> None:
+        self._evictions += 1
+
+    def hit_rate(self) -> float:
+        total = self._hits + self._misses
+        return self._hits / total if total > 0 else 0.0
+
+    def top_n_keys(self, n: int) -> List[int]:
+        sorted_keys = sorted(self._access_count, key=lambda k: -self._access_count[k])
+        return sorted_keys[:n]
+
+    def eviction_count(self) -> int:
+        return self._evictions
+
+
+class AnalyticsLRUCache:
+    """Composes CacheStore + AccessTracker. Public API delegates to both."""
+
+    def __init__(self, capacity: int):
+        self._store = CacheStore(capacity)
+        self._tracker = AccessTracker()
+
+    def get(self, key: int) -> int:
+        value = self._store.get(key)
+        if value == -1:
+            self._tracker.record_miss()
+        else:
+            self._tracker.record_hit(key)
+        return value
+
+    def put(self, key: int, value: int) -> None:
+        evicted = self._store.put(key, value)
+        if evicted != -1:
+            self._tracker.record_eviction(evicted)
+
+    def getHitRate(self) -> float:
+        return self._tracker.hit_rate()
+
+    def getMostFrequentlyAccessed(self, n: int) -> List[int]:
+        return self._tracker.top_n_keys(n)
+
+    def getEvictionCount(self) -> int:
+        return self._tracker.eviction_count()
+
+# Time: get/put O(1), getHitRate O(1), getMostFrequentlyAccessed O(k log k)
+# Space: O(capacity + distinct_keys)`
+  },
+  // ── LOGICAL & MAINTAINABLE ──
+  {
+    id: "L1", track: "Logical & Maintainable", title: "Check Similar Passwords",
+    code: `from typing import List, Tuple, Set
+
+VOWELS: Set[str] = set("aeiouAEIOU")
+DIGITS: Set[str] = set("0123456789")
+
+def char_class(ch: str) -> str:
+    """Return the character class for a single character."""
+    if ch in VOWELS:
+        return "vowel"
+    if ch in DIGITS:
+        return "digit"
+    return "consonant"
+
+
+def is_case_insensitive_match(a: str, b: str) -> bool:
+    return a.lower() == b.lower()
+
+
+def is_prefix_within_tolerance(a: str, b: str, k: int) -> bool:
+    shorter, longer = (a, b) if len(a) <= len(b) else (b, a)
+    length_diff = len(longer) - len(shorter)
+    return length_diff <= k and longer.lower().startswith(shorter.lower())
+
+
+def differs_by_one_allowed_char(a: str, b: str) -> bool:
+    if len(a) != len(b):
+        return False
+    differing_positions = [i for i, (x, y) in enumerate(zip(a, b)) if x != y]
+    if len(differing_positions) != 1:
+        return False
+    pos = differing_positions[0]
+    return char_class(a[pos]) == char_class(b[pos])
+
+
+def find_similar_pairs(passwords: List[str], k: int) -> List[Tuple[str, str]]:
+    similar_pairs = []
+    for i in range(len(passwords)):
+        for j in range(i + 1, len(passwords)):
+            a, b = passwords[i], passwords[j]
+            if (is_case_insensitive_match(a, b)
+                    or is_prefix_within_tolerance(a, b, k)
+                    or differs_by_one_allowed_char(a, b)):
+                similar_pairs.append((a, b))
+    return similar_pairs
+
+# Time: O(n^2 * L) where L = max password length
+# Space: O(n^2) for output in worst case`
+  },
+  {
+    id: "L2", track: "Logical & Maintainable", title: "Process Queries on Cart",
+    code: `from dataclasses import dataclass, field
+from typing import Dict, List, Callable
+
+@dataclass
+class CartItem:
+    item_id: str
+    qty: int
+    price: float
+
+@dataclass
+class CartState:
+    items: Dict[str, CartItem] = field(default_factory=dict)
+    applied_coupons: List[str] = field(default_factory=list)
+    checked_out: bool = False
+
+    def subtotal(self) -> float:
+        return sum(item.qty * item.price for item in self.items.values())
+
+
+def handle_add(state: CartState, parts: List[str]) -> None:
+    item_id, qty, price = parts[1], int(parts[2]), float(parts[3])
+    if item_id in state.items:
+        state.items[item_id].qty += qty
+    else:
+        state.items[item_id] = CartItem(item_id, qty, price)
+
+
+def handle_remove(state: CartState, parts: List[str]) -> None:
+    item_id, qty = parts[1], int(parts[2])
+    if item_id in state.items:
+        state.items[item_id].qty = max(0, state.items[item_id].qty - qty)
+
+
+def handle_coupon(state: CartState, parts: List[str]) -> None:
+    state.applied_coupons.append(parts[1])
+
+
+def handle_checkout(state: CartState, parts: List[str]) -> None:
+    state.checked_out = True
+
+
+HANDLERS: Dict[str, Callable] = {
+    "ADD":          handle_add,
+    "REMOVE":       handle_remove,
+    "APPLY_COUPON": handle_coupon,
+    "CHECKOUT":     handle_checkout,
+}
+
+COUPON_DISCOUNTS = {
+    "SAVE10":    lambda subtotal: subtotal * 0.10,
+    "FREESHIP":  lambda subtotal: 5.99,
+}
+SHIPPING_FEE = 5.99
+
+
+def compute_discount(state: CartState) -> float:
+    subtotal = state.subtotal()
+    total_discount = 0.0
+    for coupon in state.applied_coupons:
+        if coupon in COUPON_DISCOUNTS:
+            total_discount += COUPON_DISCOUNTS[coupon](subtotal)
+    return total_discount
+
+
+def process_cart(queries: List[str]) -> dict:
+    state = CartState()
+    for query in queries:
+        if state.checked_out:
+            break
+        parts = query.split()
+        command = parts[0]
+        if command in HANDLERS:
+            HANDLERS[command](state, parts)
+
+    subtotal  = state.subtotal()
+    discount  = compute_discount(state)
+    shipping  = 0.0 if "FREESHIP" in state.applied_coupons else SHIPPING_FEE
+    total     = subtotal - discount + shipping
+
+    return {
+        "items":    {k: {"qty": v.qty, "price": v.price} for k, v in state.items.items()},
+        "subtotal": round(subtotal, 2),
+        "discount": round(discount, 2),
+        "shipping": round(shipping, 2),
+        "total":    round(total, 2),
+    }
+
+# Time: O(Q) for processing, O(I) for final computation; Q=queries, I=items
+# Space: O(I + C); C=coupons`
+  },
+  {
+    id: "L3", track: "Logical & Maintainable", title: "Checksum Logic Validator",
+    code: `from collections import namedtuple
+import re
+
+ValidationResult = namedtuple("ValidationResult", ["is_valid", "failed_step"])
+
+VALID_RESULT = ValidationResult(is_valid=True, failed_step=0)
+EXPECTED_LENGTH = 16
+LETTER_PATTERN = re.compile(r"^[A-Z]{2}[0-9]{10}[A-Z]{4}$")
+
+
+class TrackingCodeValidator:
+
+    def validate(self, code: str) -> ValidationResult:
+        checks = [
+            self._check_length,
+            self._check_character_format,
+            self._check_digit_sum,
+            self._check_letter_checksum,
+            self._check_parity,
+        ]
+        for step_number, check in enumerate(checks, start=1):
+            if not check(code):
+                return ValidationResult(is_valid=False, failed_step=step_number)
+        return VALID_RESULT
+
+    def _check_length(self, code: str) -> bool:
+        return len(code) == EXPECTED_LENGTH
+
+    def _check_character_format(self, code: str) -> bool:
+        return bool(LETTER_PATTERN.match(code))
+
+    def _check_digit_sum(self, code: str) -> bool:
+        digits = [int(ch) for ch in code[2:12]]
+        return sum(digits) % 7 == 0
+
+    def _check_letter_checksum(self, code: str) -> bool:
+        letters = code[:2] + code[12:]
+        letter_sum = sum(ord(ch) - ord("A") + 1 for ch in letters)
+        expected_last_digit = letter_sum % 10
+        actual_tenth_digit = int(code[11])
+        return expected_last_digit == actual_tenth_digit
+
+    def _check_parity(self, code: str) -> bool:
+        digits = [int(ch) for ch in code[2:12]]
+        odd_count = sum(1 for d in digits if d % 2 != 0)
+        return odd_count == 5
+
+# Time: O(L) where L = code length (constant 16 here → O(1))
+# Space: O(1)`
+  },
+  {
+    id: "L4", track: "Logical & Maintainable", title: "Rate Limiter",
+    code: `from dataclasses import dataclass, field
+from typing import Dict, List
+from collections import deque
+
+
+class UnregisteredUserError(Exception):
+    pass
+
+
+@dataclass
+class UserRateConfig:
+    max_requests: int
+    window_seconds: int
+
+
+@dataclass
+class UserRateState:
+    config: UserRateConfig
+    request_timestamps: deque = field(default_factory=deque)
+
+
+class RateLimiter:
+
+    def __init__(self):
+        self._users: Dict[str, UserRateState] = {}
+
+    def registerUser(self, user_id: str, max_requests: int, window_seconds: int) -> None:
+        config = UserRateConfig(max_requests=max_requests, window_seconds=window_seconds)
+        self._users[user_id] = UserRateState(config=config)
+
+    def recordRequest(self, user_id: str, timestamp: int) -> bool:
+        self._validate_user(user_id)
+        state = self._users[user_id]
+        self._prune_expired_requests(state, timestamp)
+        if len(state.request_timestamps) >= state.config.max_requests:
+            return False
+        state.request_timestamps.append(timestamp)
+        return True
+
+    def getRemainingRequests(self, user_id: str, current_time: int) -> int:
+        self._validate_user(user_id)
+        state = self._users[user_id]
+        self._prune_expired_requests(state, current_time)
+        return state.config.max_requests - len(state.request_timestamps)
+
+    def resetUser(self, user_id: str) -> None:
+        self._validate_user(user_id)
+        self._users[user_id].request_timestamps.clear()
+
+    def _validate_user(self, user_id: str) -> None:
+        if user_id not in self._users:
+            raise UnregisteredUserError(f"User '{user_id}' is not registered")
+
+    def _prune_expired_requests(self, state: UserRateState, current_time: int) -> None:
+        cutoff = current_time - state.config.window_seconds
+        while state.request_timestamps and state.request_timestamps[0] <= cutoff:
+            state.request_timestamps.popleft()
+
+# Time: recordRequest O(k) amortized where k = pruned entries; getRemainingRequests O(k)
+# Space: O(U * R); U=users, R=max requests per window`
+  },
+  {
+    id: "L5", track: "Logical & Maintainable", title: "Flight Itinerary Validator",
+    code: `from dataclasses import dataclass
+from typing import List
+
+@dataclass
+class FlightSegment:
+    flight_id: str
+    origin: str
+    destination: str
+    departure_time: int
+    arrival_time: int
+
+@dataclass
+class ValidationReport:
+    is_valid: bool
+    errors: List[str]
+
+
+class ItineraryValidator:
+
+    def validate(self, segments: List[FlightSegment]) -> ValidationReport:
+        if not segments:
+            return ValidationReport(is_valid=True, errors=[])
+
+        errors: List[str] = []
+        errors.extend(self._check_duplicate_ids(segments))
+        errors.extend(self._check_time_directions(segments))
+        errors.extend(self._check_connectivity(segments))
+        errors.extend(self._check_no_overlap(segments))
+        errors.extend(self._check_total_duration(segments))
+
+        return ValidationReport(is_valid=len(errors) == 0, errors=errors)
+
+    def _check_duplicate_ids(self, segments: List[FlightSegment]) -> List[str]:
+        seen, errors = set(), []
+        for seg in segments:
+            if seg.flight_id in seen:
+                errors.append(f"Rule 1: Duplicate flight_id '{seg.flight_id}'")
+            seen.add(seg.flight_id)
+        return errors
+
+    def _check_time_directions(self, segments: List[FlightSegment]) -> List[str]:
+        return [
+            f"Rule 2: Flight '{seg.flight_id}' has departure >= arrival"
+            for seg in segments
+            if seg.departure_time >= seg.arrival_time
+        ]
+
+    def _check_connectivity(self, segments: List[FlightSegment]) -> List[str]:
+        errors = []
+        for i in range(len(segments) - 1):
+            current, next_seg = segments[i], segments[i + 1]
+            if current.destination != next_seg.origin:
+                errors.append(
+                    f"Rule 3: Segment {i+1}→{i+2} disconnected: "
+                    f"{current.destination} → {next_seg.origin}"
+                )
+        return errors
+
+    def _check_no_overlap(self, segments: List[FlightSegment]) -> List[str]:
+        errors = []
+        for i in range(len(segments) - 1):
+            current, next_seg = segments[i], segments[i + 1]
+            if current.arrival_time > next_seg.departure_time:
+                errors.append(
+                    f"Rule 4: Overlap between segment {i+1} (arrives {current.arrival_time}) "
+                    f"and segment {i+2} (departs {next_seg.departure_time})"
+                )
+        return errors
+
+    def _check_total_duration(self, segments: List[FlightSegment]) -> List[str]:
+        total_minutes = segments[-1].arrival_time - segments[0].departure_time
+        if total_minutes > 48 * 60:
+            return [f"Rule 5: Total trip duration {total_minutes} min exceeds 48 hours"]
+        return []
+
+# Time: O(n) for each check; O(n) overall
+# Space: O(n) for error list`
+  },
+];
+
+function SolutionsRef() {
+  const [filter, setFilter] = useState("All");
+  const [expanded, setExpanded] = useState({});
+  const tracks = ["All", "Classes & Mod", "Logical & Maintainable"];
+  const visible = filter === "All" ? SOLUTIONS : SOLUTIONS.filter(s => s.track === filter);
+  const toggle = id => setExpanded(p => ({...p, [id]: !p[id]}));
+
+  const trackColor = t => t === "Classes & Mod" ? "#54A24B" : t === "Logical & Maintainable" ? "#FF6692" : "#636EFA";
+
+  return (
+    <div style={{minHeight:"100vh",background:"linear-gradient(135deg,#0f1117,#1a1d27)",color:"#e0e0e0",fontFamily:"'Segoe UI',Arial,sans-serif"}}>
+      <div style={{background:"#1a1d27",borderBottom:"1px solid #2a2d3a",padding:"14px 24px",display:"flex",alignItems:"center",justifyContent:"space-between",flexWrap:"wrap",gap:"10px",position:"sticky",top:0,zIndex:100}}>
+        <div style={{fontSize:"1.15rem",fontWeight:700,color:"#fff"}}>📚 Solutions Reference</div>
+        <div style={{display:"flex",gap:"8px",flexWrap:"wrap"}}>
+          {tracks.map(t => (
+            <button key={t} onClick={()=>setFilter(t)} style={{padding:"6px 14px",borderRadius:"20px",border:"none",cursor:"pointer",fontWeight:600,fontSize:"0.82rem",background:filter===t?trackColor(t):"#252836",color:filter===t?"#fff":"#aaa"}}>
+              {t}
+            </button>
+          ))}
+        </div>
+      </div>
+      <div style={{maxWidth:"900px",margin:"0 auto",padding:"22px 14px"}}>
+        <div style={{background:"#1a1d27",borderRadius:"12px",padding:"14px 18px",marginBottom:"18px",border:"1px solid #2a2d3a",fontSize:"0.83rem",color:"#aaa",lineHeight:1.7}}>
+          <strong style={{color:"#FECB52"}}>⚠️ Use this file ONLY after you've attempted the problem.</strong> These are reference solutions following Amazon's rubric: named helpers, single-responsibility methods, guard clauses, and complexity comments. Your solution may differ — that's fine, paste it to Claude for feedback.
+        </div>
+        {visible.map(sol => {
+          const isOpen = expanded[sol.id];
+          const color = trackColor(sol.track);
+          return (
+            <div key={sol.id} style={{background:"#1a1d27",borderRadius:"14px",padding:"18px",marginBottom:"14px",border:`1px solid ${color}33`}}>
+              <div style={{display:"flex",alignItems:"center",gap:"8px",marginBottom:"12px",flexWrap:"wrap"}}>
+                <span style={{background:color+"22",color:color,padding:"2px 9px",borderRadius:"6px",fontSize:"0.73rem",fontWeight:600}}>{sol.track}</span>
+                <span style={{fontSize:"1rem",fontWeight:700,color:"#fff"}}>{sol.title}</span>
+                <button onClick={()=>toggle(sol.id)} style={{marginLeft:"auto",padding:"5px 14px",borderRadius:"8px",border:`1px solid ${color}`,background:"transparent",color:color,cursor:"pointer",fontSize:"0.8rem",fontWeight:600}}>
+                  {isOpen ? "🙈 Hide Solution" : "👁️ Show Solution"}
+                </button>
+              </div>
+              {isOpen && (
+                <pre style={{background:"#0f1117",padding:"16px",borderRadius:"10px",fontSize:"0.8rem",color:"#c9d1d9",overflowX:"auto",lineHeight:1.6,borderLeft:`3px solid ${color}`}}>
+                  {sol.code}
+                </pre>
+              )}
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
+ReactDOM.createRoot(document.getElementById("root")).render(<SolutionsRef/>);
+</script>
+</body>
+</html>

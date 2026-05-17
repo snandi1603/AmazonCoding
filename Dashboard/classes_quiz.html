@@ -1,0 +1,474 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>⚙️ Classes & Modularization Quiz</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/react/18.2.0/umd/react.production.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.2.0/umd/react-dom.production.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/babel-standalone/7.23.2/babel.min.js"></script>
+<style>*{margin:0;padding:0;box-sizing:border-box;}body{background:#0f1117;}::-webkit-scrollbar{width:6px;}::-webkit-scrollbar-track{background:#1a1d27;}::-webkit-scrollbar-thumb{background:#54A24B55;border-radius:3px;}pre{white-space:pre-wrap;word-break:break-word;}</style>
+</head>
+<body>
+<div id="root"></div>
+<script type="text/babel">
+const { useState } = React;
+
+const PROBLEMS = [
+  {
+    id: 1,
+    title: "Team Ranking System",
+    source: "Amazon OA 2026",
+    difficulty: "Medium",
+    focus: "HashMap + cached best pointer",
+    desc: `Design a data structure for a volleyball league. Matches are reported one at a time. After each match you must be able to return the current top-ranked team in O(1).
+
+Implement the following API:
+  • addMatch(teamA, teamB, scoreA, scoreB) — record result, update standings
+  • findFirst() → str — return current top team name in O(1)
+  • getTeam(name) → (wins, losses, points) — return team stats
+
+Ranking rules:
+  1. Most wins first
+  2. Tie-break by total points scored
+  3. Tie-break by team name alphabetically`,
+    example: `addMatch("Alpha","Beta",3,1)
+addMatch("Alpha","Gamma",2,3)
+addMatch("Beta","Gamma",1,2)
+
+findFirst() → "Gamma"   # 2 wins, 5 points
+getTeam("Alpha") → (1, 1, 5)
+getTeam("Beta")  → (0, 2, 2)
+getTeam("Gamma") → (2, 0, 5)`,
+    constraints: `• 1 ≤ number of teams ≤ 10^4
+• 1 ≤ scores ≤ 100
+• Team names are unique non-empty strings
+• addMatch called up to 10^5 times
+• findFirst() must be O(1)`,
+    amazon_signal: "Create separate Team and League classes. Encapsulate ranking comparison in a helper. Cache best team inside addMatch — never scan on findFirst().",
+    hint: "Team dataclass holds wins/losses/points. League has HashMap<name,Team> + best_team pointer. After addMatch, update both teams then compare winner to best_team.",
+  },
+  {
+    id: 2,
+    title: "Optimal Task Scheduling",
+    source: "Amazon OA 2026",
+    difficulty: "Medium",
+    focus: "Scheduler class with priority queue",
+    desc: `Design a task scheduler system that supports:
+  • addTask(taskId, priority, duration) — add a task to the queue
+  • tick(n) — advance the clock by n time units, running the highest-priority task first
+  • getCompleted() → List[str] — return completed task IDs in completion order
+  • peek() → str — return the next task that will run (without running it)
+
+Tasks run to completion (non-preemptive). Highest priority = lowest priority number (like Linux nice values). Break priority ties by taskId alphabetically.`,
+    example: `scheduler = TaskScheduler()
+scheduler.addTask("T1", priority=2, duration=3)
+scheduler.addTask("T2", priority=1, duration=5)
+scheduler.addTask("T3", priority=2, duration=1)
+
+scheduler.peek()      → "T2"  # lowest priority number
+scheduler.tick(5)             # runs T2 to completion
+scheduler.getCompleted()  → ["T2"]
+scheduler.tick(1)             # runs T3 (pri=2, shorter wait)
+scheduler.getCompleted()  → ["T2","T3"]`,
+    constraints: `• taskId strings are unique
+• 1 ≤ priority ≤ 100
+• 1 ≤ duration ≤ 10^6
+• tick(n) where 1 ≤ n ≤ 10^9
+• Up to 10^4 addTask calls`,
+    amazon_signal: "Separate Task dataclass from Scheduler. Scheduler owns the heap and clock. tick() and peek() are clean single-responsibility methods.",
+    hint: "Use heapq with (priority, taskId, duration). tick reduces remaining time of current task; when it hits 0, pop and add to completed list, start next.",
+  },
+  {
+    id: 3,
+    title: "Deliver Zones",
+    source: "Amazon OA 2026",
+    difficulty: "Medium",
+    focus: "Zone partitioning class with grouping logic",
+    desc: `You manage a delivery network. Each delivery point has an (x, y) coordinate and a zone_id. Implement a DeliveryNetwork class:
+
+  • addPoint(pointId, x, y, zoneId) — register a delivery point
+  • getZonePoints(zoneId) → List[str] — return all point IDs in a zone, sorted by distance from zone centroid
+  • mergeZones(zoneA, zoneB, newZoneId) — merge two zones into a new one
+  • nearestPoint(x, y) → str — return ID of the closest delivery point to the given coordinate`,
+    example: `net = DeliveryNetwork()
+net.addPoint("P1", 0, 0, "Z1")
+net.addPoint("P2", 1, 1, "Z1")
+net.addPoint("P3", 5, 5, "Z2")
+
+net.getZonePoints("Z1")  → ["P1","P2"]  # sorted by dist from centroid (0.5,0.5)
+net.nearestPoint(4, 4)   → "P3"
+net.mergeZones("Z1","Z2","Z3")
+net.getZonePoints("Z3")  → ["P1","P2","P3"]`,
+    constraints: `• Up to 10^4 points
+• Coordinates are floats in [-10^6, 10^6]
+• Zone IDs are non-empty strings
+• A zone must exist before mergeZones is called`,
+    amazon_signal: "DeliveryPoint dataclass, Zone class (holds points, computes centroid), DeliveryNetwork as top-level coordinator. Each method delegates to the right class.",
+    hint: "Zone stores list of DeliveryPoint. Centroid = mean of x and mean of y. nearestPoint does linear scan (or build k-d tree for bonus). mergeZones creates new Zone with combined points.",
+  },
+  {
+    id: 4,
+    title: "Warehouse Distribution",
+    source: "Amazon OA 2026",
+    difficulty: "Medium",
+    focus: "Warehouse model + binary search allocator",
+    desc: `A warehouse stores log segments. Each log has a log_id and a part_number. Only parts with the same log_id can be stored together. Implement a WarehouseAllocator:
+
+  • addLog(logId, numParts) — register a log with its total number of parts
+  • storePart(logId, partNum) — store a part (parts for same log must go together)
+  • canFulfillOrder(logId, partsNeeded) → bool — true if at least partsNeeded parts of logId are stored
+  • getStorageReport() → Dict[str, int] — return {logId: stored_part_count} for all logs with at least one stored part
+
+Additional requirement: allocate storage slots using binary search over sorted slot arrays for O(log n) slot assignment.`,
+    example: `wa = WarehouseAllocator(capacity=10)
+wa.addLog("LOG1", numParts=5)
+wa.addLog("LOG2", numParts=3)
+wa.storePart("LOG1", 1)
+wa.storePart("LOG1", 2)
+wa.storePart("LOG2", 1)
+
+wa.canFulfillOrder("LOG1", 2)  → True
+wa.canFulfillOrder("LOG1", 3)  → False
+wa.getStorageReport()  → {"LOG1": 2, "LOG2": 1}`,
+    constraints: `• 1 ≤ capacity ≤ 10^5
+• logId strings unique
+• partNum is 1-indexed, 1 ≤ partNum ≤ numParts
+• Storing duplicate (logId, partNum) is a no-op`,
+    amazon_signal: "Log dataclass, WarehouseAllocator class. Separate _find_slot() helper using bisect. storePart and canFulfillOrder delegate to the Log object.",
+    hint: "Log holds a sorted list of stored parts (use bisect.insort). canFulfillOrder checks len(log.parts) >= partsNeeded. Allocator has dict[logId → Log].",
+  },
+  {
+    id: 5,
+    title: "Server Instance Allocation & Cost",
+    source: "Amazon OA 2026",
+    difficulty: "Medium",
+    focus: "Server pool abstraction + heap-based selection",
+    desc: `Manage a pool of servers for a cloud platform. Each server has an instance_id, type ('small'|'medium'|'large'), and hourly_cost. Implement a ServerPool:
+
+  • addServer(instanceId, serverType, hourlyCost) — register a server as idle
+  • allocate(serverType) → str — allocate the cheapest idle server of given type; return instanceId. Raise if none available.
+  • release(instanceId) — return server to idle pool
+  • getCost(instanceId, hours) → float — return total cost for hours of use
+  • idleCount(serverType) → int — return count of idle servers of that type
+
+IMPORTANT: cost must be computed before de-allocating. Compute cost at allocation time.`,
+    example: `pool = ServerPool()
+pool.addServer("i-001", "small", 0.05)
+pool.addServer("i-002", "small", 0.03)
+pool.addServer("i-003", "large", 0.20)
+
+pool.allocate("small")   → "i-002"  # cheapest small
+pool.idleCount("small")  → 1
+pool.getCost("i-002", 10) → 0.30
+pool.release("i-002")
+pool.idleCount("small")  → 2`,
+    constraints: `• Up to 10^4 servers
+• serverType in {"small","medium","large","xlarge"}
+• hourlyCost is a positive float
+• Allocating from empty pool raises ValueError
+• release of non-allocated server is a no-op`,
+    amazon_signal: "Server dataclass, ServerPool class with per-type min-heaps. Separate _get_heap(type) helper. getCost and release are clean methods — no logic leaks to caller.",
+    hint: "Per-type heap: (hourlyCost, instanceId). allocated dict maps instanceId → Server. release pushes back to heap. getCost = server.hourlyCost * hours.",
+  },
+  {
+    id: 6,
+    title: "Server Security Level Grouping",
+    source: "Amazon OA 2026",
+    difficulty: "Medium",
+    focus: "Group/Level data model + near-equal splitter",
+    desc: `You have n servers, each with a security_level (int). Split them into exactly k groups such that:
+  1. Each group has between floor(n/k) and ceil(n/k) servers (near-equal sizes)
+  2. Within each group, all servers are sorted by security level
+  3. The variance (max_level - min_level) within each group is minimized
+
+Return the grouping as a list of lists and the total variance (sum of per-group variances).
+
+Implement a SecurityGrouper class with:
+  • addServer(serverId, securityLevel)
+  • group(k) → (List[List[str]], int)`,
+    example: `sg = SecurityGrouper()
+sg.addServer("S1", 1)
+sg.addServer("S2", 3)
+sg.addServer("S3", 5)
+sg.addServer("S4", 2)
+sg.addServer("S5", 8)
+sg.addServer("S6", 6)
+
+groups, total_variance = sg.group(2)
+# groups = [["S1","S4","S2"],["S3","S6","S5"]] → levels [1,2,3] and [5,6,8]
+# variances: 2 and 3 → total = 5`,
+    constraints: `• 1 ≤ n ≤ 10^4
+• 1 ≤ k ≤ n
+• Security levels are positive integers
+• n % k may not be 0 — handle ceil/floor sizes`,
+    amazon_signal: "Server dataclass. SecurityGrouper encapsulates sort + partition logic. group() delegates to _partition_into_k_groups() helper. Variance computed by _compute_variance() helper.",
+    hint: "Sort servers by security level. Optimal contiguous partition minimizes variance. Distribute ceil groups first: first (n%k) groups get ceil(n/k), rest get floor(n/k).",
+  },
+  {
+    id: 7,
+    title: "Calculate Final Prices with Discount Engine",
+    source: "Amazon OA 2026",
+    difficulty: "Medium",
+    focus: "Pricing engine with sequenced discount rules",
+    desc: `Build a PricingEngine that applies a sequence of discount rules to a shopping cart. Rules are applied in registration order. Each rule has a name and a condition + discount function.
+
+Implement:
+  • addRule(ruleName, conditionFn, discountFn) — register a discount rule
+  • applyRules(cart) → Dict[str, float] — return final prices after all rules applied
+  • getRuleReport(cart) → List[Dict] — return per-rule breakdown showing which items were affected
+
+Cart format: Dict[itemId → original_price].
+Rules are applied cumulatively (price after rule N feeds into rule N+1).`,
+    example: `engine = PricingEngine()
+engine.addRule("bulk",   lambda p: p > 50,  lambda p: p * 0.90)  # 10% off if >$50
+engine.addRule("loyalty",lambda p: True,    lambda p: p - 2.0)   # $2 off everything
+
+cart = {"A": 60.0, "B": 30.0, "C": 100.0}
+engine.applyRules(cart)
+# A: 60→54(bulk)→52.0(loyalty)
+# B: 30→30(no bulk)→28.0(loyalty)
+# C: 100→90(bulk)→88.0(loyalty)
+# → {"A":52.0, "B":28.0, "C":88.0}`,
+    constraints: `• Up to 20 rules
+• Up to 10^3 items in cart
+• Prices are positive floats
+• Rules must be applied in registration order
+• Original prices are never mutated`,
+    amazon_signal: "DiscountRule dataclass (name, condition, discount). PricingEngine owns list of rules + apply pipeline. getRuleReport() shows per-rule delta — separate from applyRules().",
+    hint: "DiscountRule = namedtuple or dataclass with name/condition/discount. applyRules: for each item, iterate rules, apply if condition(current_price). getRuleReport tracks before/after per rule.",
+  },
+  {
+    id: 8,
+    title: "LRU Cache with Usage Analytics",
+    source: "Extended LC 146",
+    difficulty: "Medium",
+    focus: "Cache class + analytics module separation",
+    desc: `Extend LRU Cache (LC 146) with analytics. Implement an AnalyticsLRUCache:
+
+  • get(key) → int — return value, -1 if not present. Count as a cache hit.
+  • put(key, value) — insert or update. Count evictions if capacity exceeded.
+  • getHitRate() → float — hits / (hits + misses) since construction
+  • getMostFrequentlyAccessed(n) → List[key] — top n most accessed keys
+  • getEvictionCount() → int — total evictions`,
+    example: `cache = AnalyticsLRUCache(capacity=2)
+cache.put(1, 10)
+cache.put(2, 20)
+cache.get(1)        → 10  # hit
+cache.put(3, 30)    # evicts key 2
+cache.get(2)        → -1  # miss
+cache.getHitRate()  → 0.5  # 1 hit, 1 miss
+cache.getEvictionCount() → 1
+cache.getMostFrequentlyAccessed(1) → [1]`,
+    constraints: `• 1 ≤ capacity ≤ 3000
+• 0 ≤ key, value ≤ 10^4
+• At most 10^5 operations`,
+    amazon_signal: "Separate CacheStore (HashMap + DLL for LRU) from AccessTracker (hit/miss/eviction counters + frequency map). AnalyticsLRUCache composes both — it does NOT mix tracking logic into get/put directly.",
+    hint: "CacheStore handles LRU mechanics. AccessTracker.recordHit(key), recordMiss(), recordEviction(key). AnalyticsLRUCache.get() calls store.get(), then tracker.recordHit or recordMiss.",
+  },
+  {
+    id: 9,
+    title: "Event-Driven Order Management System",
+    source: "Amazon OA Pattern",
+    difficulty: "Medium",
+    focus: "Command pattern + state machine",
+    desc: `Design an order management system. Orders go through states: PENDING → CONFIRMED → SHIPPED → DELIVERED (or CANCELLED from any state except DELIVERED).
+
+Implement an OrderSystem:
+  • createOrder(orderId, items, customerId) → Order
+  • processEvent(orderId, event) — valid events: CONFIRM, SHIP, DELIVER, CANCEL
+  • getOrder(orderId) → Order
+  • getOrdersByCustomer(customerId) → List[Order]
+  • getOrdersByStatus(status) → List[Order]
+
+Invalid transitions (e.g. SHIP before CONFIRM) should raise InvalidTransitionError.`,
+    example: `sys = OrderSystem()
+sys.createOrder("O1", ["item1","item2"], "C1")
+sys.processEvent("O1", "CONFIRM")
+sys.processEvent("O1", "SHIP")
+sys.getOrder("O1").status  → "SHIPPED"
+sys.processEvent("O1", "CONFIRM")  # raises InvalidTransitionError
+sys.getOrdersByStatus("SHIPPED")   → [<Order O1>]`,
+    constraints: `• Up to 10^4 orders
+• orderId strings are unique
+• Events must follow state machine rules
+• CANCEL is valid from PENDING or CONFIRMED or SHIPPED`,
+    amazon_signal: "Order dataclass, OrderStateMachine (holds transitions dict), OrderSystem coordinates. processEvent delegates to StateMachine.transition(). Index by customer and status for O(1) lookups.",
+    hint: "TRANSITIONS = {PENDING:[CONFIRMED,CANCELLED], CONFIRMED:[SHIPPED,CANCELLED], SHIPPED:[DELIVERED,CANCELLED]}. StateMachine.transition(order, event) checks validity then updates status.",
+  },
+  {
+    id: 10,
+    title: "Inventory Management with Reorder System",
+    source: "Amazon OA Pattern",
+    difficulty: "Medium",
+    focus: "Inventory class + reorder policy encapsulation",
+    desc: `Build an InventoryManager for a warehouse:
+
+  • addProduct(productId, name, quantity, reorderPoint, reorderQty)
+  • sell(productId, qty) → bool — reduce inventory, return False if insufficient stock
+  • restock(productId, qty) — add to inventory
+  • checkReorders() → List[str] — return productIds that have fallen at or below reorderPoint
+  • getReport() → Dict — summary: {productId: {name, qty, needs_reorder: bool}}
+
+Reorder check happens automatically after every sell().`,
+    example: `inv = InventoryManager()
+inv.addProduct("P1","Widget",100,reorderPoint=20,reorderQty=50)
+inv.sell("P1", 85)   → True  # qty now 15, below reorderPoint
+inv.checkReorders()  → ["P1"]
+inv.restock("P1", 50)  # qty now 65
+inv.checkReorders()  → []
+inv.sell("P1", 200)  → False  # insufficient`,
+    constraints: `• Up to 10^3 products
+• qty, reorderPoint, reorderQty are positive integers
+• sell() of non-existent productId raises KeyError`,
+    amazon_signal: "Product dataclass (holds all fields + needs_reorder property). InventoryManager holds dict[productId → Product]. checkReorders() is pure query — no side effects. sell() calls _check_reorder(product) helper.",
+    hint: "Product.needs_reorder = property: return self.quantity <= self.reorder_point. sell() returns False early if qty > self.quantity. After sell, call _trigger_reorder_check(product).",
+  },
+];
+
+function ClassesQuiz() {
+  const [answered, setAnswered] = useState({});
+  const [batchIdx, setBatchIdx] = useState(0);
+  const [expanded, setExpanded] = useState({});
+  const PER_BATCH = 2;
+  const totalBatches = Math.ceil(PROBLEMS.length / PER_BATCH);
+  const currentBatch = PROBLEMS.slice(batchIdx*PER_BATCH, (batchIdx+1)*PER_BATCH);
+  const mark = (id, status) => setAnswered(p=>({...p,[id]:status}));
+  const toggle = (id,key) => setExpanded(p=>({...p,[`${id}_${key}`]:!p[`${id}_${key}`]}));
+  const solved = Object.values(answered).filter(v=>v==="solved").length;
+  const unsolved = Object.values(answered).filter(v=>v==="unsolved").length;
+  const skipped = Object.values(answered).filter(v=>v==="skip").length;
+  const total_done = solved+unsolved+skipped;
+  const pct = Math.round((total_done/PROBLEMS.length)*100);
+  const allBatchDone = currentBatch.every(p=>answered[p.id]);
+
+  const S = {
+    app:{minHeight:"100vh",background:"linear-gradient(135deg,#0f1117,#1a2210)",color:"#e0e0e0",fontFamily:"'Segoe UI',Arial,sans-serif"},
+    hdr:{background:"#1a1d27",borderBottom:"1px solid #2a3a2a",padding:"14px 24px",display:"flex",alignItems:"center",justifyContent:"space-between",flexWrap:"wrap",gap:"10px",position:"sticky",top:0,zIndex:100},
+    main:{maxWidth:"900px",margin:"0 auto",padding:"22px 14px"},
+    card:s=>({background:s==="solved"?"#0f2a14":s==="unsolved"?"#2a1414":s==="skip"?"#2a2008":"#1a1d27",borderRadius:"16px",padding:"22px",marginBottom:"18px",border:`1px solid ${s==="solved"?"#00b8a340":s==="unsolved"?"#ff375f40":s==="skip"?"#ffc01e40":"#2a3a2a"}`}),
+    badge:(bg,c)=>({background:bg,color:c,padding:"3px 10px",borderRadius:"6px",fontSize:"0.73rem",fontWeight:600,display:"inline-block"}),
+    btn:(border,bg,c)=>({padding:"7px 14px",borderRadius:"8px",border:`1px solid ${border}`,background:bg,color:c,cursor:"pointer",fontSize:"0.8rem",fontWeight:600}),
+    section:{marginTop:"14px",background:"#252836",borderRadius:"10px",padding:"14px 16px"},
+    sectionTitle:(c)=>({fontWeight:700,color:c,marginBottom:"8px",fontSize:"0.85rem"}),
+    expandBtn:c=>({background:"none",border:`1px solid ${c}`,color:c,borderRadius:"6px",padding:"5px 12px",cursor:"pointer",fontSize:"0.78rem",fontWeight:600,marginRight:"8px",marginTop:"8px"}),
+  };
+
+  return (
+    <div style={S.app}>
+      <div style={S.hdr}>
+        <div style={{fontSize:"1.1rem",fontWeight:700,color:"#fff",display:"flex",alignItems:"center",gap:"10px"}}>
+          ⚙️ Classes &amp; Modularization
+          <span style={{fontSize:"0.75rem",color:"#888",fontWeight:400}}>{PROBLEMS.length} problems · Paste answers to Claude for review</span>
+        </div>
+        <div style={{display:"flex",gap:"10px",alignItems:"center"}}>
+          <div style={{background:"#252836",borderRadius:"20px",padding:"5px 14px",fontSize:"0.82rem",color:"#54A24B",fontWeight:600}}>
+            {total_done}/{PROBLEMS.length} done ({pct}%)
+          </div>
+          <div style={{background:"#252836",borderRadius:"8px",height:"6px",width:"120px",overflow:"hidden"}}>
+            <div style={{height:"100%",width:`${pct}%`,background:"linear-gradient(90deg,#54A24B,#00b8a3)",borderRadius:"8px",transition:"width 0.4s"}}/>
+          </div>
+        </div>
+      </div>
+
+      <div style={S.main}>
+        <div style={{background:"#1a1d27",borderRadius:"12px",padding:"14px 18px",marginBottom:"18px",border:"1px solid #2a3a2a",fontSize:"0.83rem",color:"#aaa",lineHeight:1.7}}>
+          <strong style={{color:"#54A24B"}}>⚙️ How to use:</strong> Read each problem, write your solution in your editor, then paste it to Claude for review. Mark <strong style={{color:"#00b8a3"}}>Solved</strong> when Claude confirms it's good, <strong style={{color:"#ff375f"}}>Review</strong> if you need more work. Use <strong style={{color:"#AB63FA"}}>💡 Hint</strong> if stuck and <strong style={{color:"#19D3F3"}}>📖 Full Problem</strong> to see the complete spec.
+          <br/><br/>
+          <strong style={{color:"#FECB52"}}>🎯 Amazon grades you on:</strong> Class boundaries · Single-responsibility methods · Encapsulated state · Domain-matching names · Efficient data structures
+        </div>
+
+        <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:"16px",background:"#1a1d27",borderRadius:"12px",padding:"14px 18px",border:"1px solid #2a3a2a"}}>
+          <div>
+            <div style={{fontWeight:700,color:"#fff"}}>Batch {batchIdx+1} / {totalBatches}</div>
+            <div style={{fontSize:"0.83rem",color:"#aaa"}}>Problems {batchIdx*PER_BATCH+1}–{Math.min((batchIdx+1)*PER_BATCH,PROBLEMS.length)}</div>
+          </div>
+          <div style={{display:"flex",gap:"8px"}}>
+            <button style={{...S.btn("#54A24B","#1e2030","#54A24B"),opacity:batchIdx===0?0.3:1}} onClick={()=>batchIdx>0&&setBatchIdx(b=>b-1)}>← Prev</button>
+            <button style={{...S.btn("#00b8a3","#003d37","#00b8a3"),opacity:batchIdx>=totalBatches-1?0.3:1}} onClick={()=>batchIdx<totalBatches-1&&setBatchIdx(b=>b+1)}>Next →</button>
+          </div>
+        </div>
+
+        {currentBatch.map(p=>{
+          const status=answered[p.id];
+          const showFull=expanded[`${p.id}_full`];
+          const showHint=expanded[`${p.id}_hint`];
+          const showSignal=expanded[`${p.id}_signal`];
+          return (
+            <div key={p.id} style={S.card(status)}>
+              <div style={{display:"flex",alignItems:"center",gap:"8px",marginBottom:"12px",flexWrap:"wrap"}}>
+                <span style={S.badge("#252836","#888")}>#{p.id}</span>
+                <span style={S.badge("#54A24B22","#54A24B")}>⚙️ Classes & Mod</span>
+                <span style={S.badge(p.difficulty==="Hard"?"#3d0010":"#3d2f00",p.difficulty==="Hard"?"#ff375f":"#ffc01e")}>{p.difficulty}</span>
+                <span style={S.badge("#19D3F322","#19D3F3")}>{p.focus}</span>
+                <span style={{marginLeft:"auto",fontSize:"0.73rem",color:"#666"}}>{p.source}</span>
+                {status&&<span style={{fontSize:"1.1rem"}}>{status==="solved"?"✅":status==="unsolved"?"❌":"⏭️"}</span>}
+              </div>
+
+              <div style={{fontSize:"1.05rem",fontWeight:700,color:"#fff",marginBottom:"14px"}}>{p.title}</div>
+
+              {/* Short description always visible */}
+              <div style={{fontSize:"0.85rem",color:"#ccc",lineHeight:1.7,marginBottom:"14px",background:"#1e2535",borderRadius:"8px",padding:"12px 14px"}}>
+                {p.desc.split('\n').slice(0,4).join('\n')}
+                {!showFull&&<span style={{color:"#54A24B",cursor:"pointer",marginLeft:"6px"}} onClick={()=>toggle(p.id,'full')}>… read more</span>}
+              </div>
+
+              {showFull&&<>
+                <div style={{fontSize:"0.85rem",color:"#ccc",lineHeight:1.7,marginBottom:"12px",background:"#1e2535",borderRadius:"8px",padding:"12px 14px"}}>
+                  {p.desc}
+                </div>
+                <div style={S.section}>
+                  <div style={S.sectionTitle("#FECB52")}>📋 Example</div>
+                  <pre style={{fontSize:"0.8rem",color:"#ccc",background:"#0f1117",padding:"10px",borderRadius:"8px",overflowX:"auto"}}>{p.example}</pre>
+                </div>
+                <div style={{...S.section,marginTop:"10px"}}>
+                  <div style={S.sectionTitle("#636EFA")}>📐 Constraints</div>
+                  <pre style={{fontSize:"0.8rem",color:"#aaa",whiteSpace:"pre-wrap"}}>{p.constraints}</pre>
+                </div>
+              </>}
+
+              <div style={{marginTop:"4px",display:"flex",flexWrap:"wrap",gap:"4px"}}>
+                <button style={S.expandBtn("#54A24B")} onClick={()=>toggle(p.id,'full')}>{showFull?"📕 Collapse":"📖 Full Problem"}</button>
+                <button style={S.expandBtn("#AB63FA")} onClick={()=>toggle(p.id,'hint')}>{showHint?"🙈 Hide Hint":"💡 Hint"}</button>
+                <button style={S.expandBtn("#19D3F3")} onClick={()=>toggle(p.id,'signal')}>{showSignal?"🙈 Hide":"🎯 Amazon Signal"}</button>
+              </div>
+
+              {showHint&&<div style={{marginTop:"10px",background:"#1e2035",borderRadius:"10px",padding:"12px 14px",borderLeft:"3px solid #AB63FA",fontSize:"0.83rem",color:"#ccc",lineHeight:1.6}}>
+                <strong style={{color:"#AB63FA"}}>💡 Approach: </strong>{p.hint}
+              </div>}
+              {showSignal&&<div style={{marginTop:"10px",background:"#1e2535",borderRadius:"10px",padding:"12px 14px",borderLeft:"3px solid #FECB52",fontSize:"0.83rem",color:"#ccc",lineHeight:1.6}}>
+                <strong style={{color:"#FECB52"}}>🎯 What Amazon wants to see: </strong>{p.amazon_signal}
+              </div>}
+
+              <div style={{marginTop:"14px",display:"flex",gap:"8px",flexWrap:"wrap"}}>
+                <button style={{...S.btn("#00b8a3",status==="solved"?"#005f4a":"#003d37","#00b8a3")}} onClick={()=>mark(p.id,"solved")}>✅ Solved</button>
+                <button style={{...S.btn("#ff375f",status==="unsolved"?"#5f0015":"#3d0010","#ff375f")}} onClick={()=>mark(p.id,"unsolved")}>❌ Review</button>
+                <button style={{...S.btn("#ffc01e",status==="skip"?"#5f4f00":"#3d3200","#ffc01e")}} onClick={()=>mark(p.id,"skip")}>⏭️ Skip</button>
+                <span style={{fontSize:"0.77rem",color:"#555",alignSelf:"center",marginLeft:"4px"}}>📋 Paste your solution to Claude to verify</span>
+              </div>
+            </div>
+          );
+        })}
+
+        {allBatchDone&&batchIdx<totalBatches-1&&(
+          <div style={{background:"#0f2a14",border:"1px solid #54A24B",borderRadius:"12px",padding:"16px",textAlign:"center",marginTop:"8px"}}>
+            <div style={{fontSize:"1rem",fontWeight:700,color:"#54A24B",marginBottom:"6px"}}>🎉 Batch {batchIdx+1} done!</div>
+            <button style={{...S.btn("#54A24B","#1a3a1a","#54A24B"),padding:"9px 26px"}} onClick={()=>{setBatchIdx(b=>b+1);window.scrollTo(0,0);}}>Next Batch →</button>
+          </div>
+        )}
+        {total_done===PROBLEMS.length&&(
+          <div style={{background:"linear-gradient(135deg,#0f2a14,#1a2d45)",border:"1px solid #54A24B",borderRadius:"14px",padding:"24px",textAlign:"center",marginTop:"16px"}}>
+            <div style={{fontSize:"2rem",marginBottom:"8px"}}>🏆</div>
+            <div style={{fontSize:"1.2rem",fontWeight:800,color:"#fff",marginBottom:"6px"}}>All {PROBLEMS.length} design problems done!</div>
+            <div style={{fontSize:"0.88rem",color:"#aaa"}}>{solved} solved · {unsolved} review · {skipped} skipped</div>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+ReactDOM.createRoot(document.getElementById("root")).render(<ClassesQuiz/>);
+</script>
+</body>
+</html>

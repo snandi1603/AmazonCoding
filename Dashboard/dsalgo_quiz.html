@@ -1,0 +1,652 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>🚀 Amazon DS&A Quiz</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/react/18.2.0/umd/react.production.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.2.0/umd/react-dom.production.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/babel-standalone/7.23.2/babel.min.js"></script>
+<style>* {margin:0;padding:0;box-sizing:border-box;} body{background:#0f1117;} ::-webkit-scrollbar{width:6px;} ::-webkit-scrollbar-track{background:#1a1d27;} ::-webkit-scrollbar-thumb{background:#636EFA55;border-radius:3px;}</style>
+</head>
+<body>
+<div id="root"></div>
+<script type="text/babel">
+const { useState } = React;
+
+// ── Questions: [rank, lcNum, title, acceptance, difficulty, category, isOA]
+// isOA = true means it's from the Amazon OA doc (not a standard LC problem)
+const ALL_QUESTIONS = [
+  // ── Standard LeetCode questions (from AmazonQuestionList.txt) ──
+  [1,1,"Two Sum","57.2%","Easy","Arrays / Hashing",false],
+  [2,3,"Longest Substring Without Repeating Characters","38.7%","Medium","Sliding Window / Two Pointers",false],
+  [3,42,"Trapping Rain Water","67.0%","Hard","Stack / Monotonic Stack",false],
+  [4,146,"LRU Cache","47.0%","Medium","Design",false],
+  [5,11,"Container With Most Water","59.7%","Medium","Sliding Window / Two Pointers",false],
+  [6,2,"Add Two Numbers","48.1%","Medium","Linked List",false],
+  [7,14,"Longest Common Prefix","47.3%","Easy","String",false],
+  [8,121,"Best Time to Buy and Sell Stock","56.5%","Easy","Dynamic Programming",false],
+  [9,5,"Longest Palindromic Substring","37.5%","Medium","Dynamic Programming",false],
+  [10,15,"3Sum","38.8%","Medium","Sliding Window / Two Pointers",false],
+  [11,200,"Number of Islands","64.0%","Medium","Graph / BFS / DFS",false],
+  [12,875,"Koko Eating Bananas","49.8%","Medium","Binary Search",false],
+  [13,4,"Median of Two Sorted Arrays","46.1%","Hard","Binary Search",false],
+  [14,56,"Merge Intervals","51.4%","Medium","Sorting / Greedy",false],
+  [15,49,"Group Anagrams","72.3%","Medium","Arrays / Hashing",false],
+  [16,23,"Merge k Sorted Lists","59.1%","Hard","Sorting / Greedy",false],
+  [17,169,"Majority Element","66.2%","Easy","Arrays / Hashing",false],
+  [18,128,"Longest Consecutive Sequence","47.0%","Medium","Arrays / Hashing",false],
+  [19,560,"Subarray Sum Equals K","47.0%","Medium","Sorting / Greedy",false],
+  [20,9,"Palindrome Number","60.4%","Easy","Arrays / Hashing",false],
+  [21,20,"Valid Parentheses","43.9%","Easy","Stack / Monotonic Stack",false],
+  [22,22,"Generate Parentheses","78.4%","Medium","Backtracking / Recursion",false],
+  [24,17,"Letter Combinations of a Phone Number","65.7%","Medium","Backtracking / Recursion",false],
+  [25,21,"Merge Two Sorted Lists","68.1%","Easy","Linked List",false],
+  [26,70,"Climbing Stairs","54.0%","Easy","Dynamic Programming",false],
+  [27,136,"Single Number","77.5%","Easy","Arrays / Hashing",false],
+  [28,162,"Find Peak Element","46.8%","Medium","Binary Search",false],
+  [29,994,"Rotting Oranges","58.3%","Medium","Graph / BFS / DFS",false],
+  [30,33,"Search in Rotated Sorted Array","44.3%","Medium","Binary Search",false],
+  [31,69,"Sqrt(x)","41.6%","Easy","Binary Search",false],
+  [32,904,"Fruit Into Baskets","50.7%","Medium","Sliding Window / Two Pointers",false],
+  [33,41,"First Missing Positive","42.6%","Hard","Arrays / Hashing",false],
+  [34,53,"Maximum Subarray","53.1%","Medium","Dynamic Programming",false],
+  [35,236,"Lowest Common Ancestor of a Binary Tree","68.9%","Medium","Trees",false],
+  [36,239,"Sliding Window Maximum","48.5%","Hard","Sliding Window / Two Pointers",false],
+  [37,1929,"Concatenation of Array","90.5%","Easy","Arrays / Hashing",false],
+  [38,79,"Word Search","47.0%","Medium","Backtracking / Recursion",false],
+  [40,51,"N-Queens","75.1%","Hard","Backtracking / Recursion",false],
+  [41,88,"Merge Sorted Array","54.5%","Easy","Sorting / Greedy",false],
+  [43,767,"Reorganize String","56.9%","Medium","Sorting / Greedy",false],
+  [44,26,"Remove Duplicates from Sorted Array","62.5%","Easy","Arrays / Hashing",false],
+  [45,35,"Search Insert Position","50.9%","Easy","Binary Search",false],
+  [47,242,"Valid Anagram","67.9%","Easy","Arrays / Hashing",false],
+  [48,347,"Top K Frequent Elements","66.1%","Medium","Sorting / Greedy",false],
+  [49,18,"4Sum","40.2%","Medium","Sliding Window / Two Pointers",false],
+  [50,28,"Find the Index of the First Occurrence in a String","46.4%","Easy","String",false],
+  [52,75,"Sort Colors","69.3%","Medium","Sorting / Greedy",false],
+  [53,78,"Subsets","82.1%","Medium","Backtracking / Recursion",false],
+  [54,155,"Min Stack","57.9%","Medium","Stack / Monotonic Stack",false],
+  [55,217,"Contains Duplicate","64.2%","Easy","Arrays / Hashing",false],
+  [57,31,"Next Permutation","44.9%","Medium","Sorting / Greedy",false],
+  [58,74,"Search a 2D Matrix","53.7%","Medium","Binary Search",false],
+  [60,207,"Course Schedule","51.0%","Medium","Graph / BFS / DFS",false],
+  [61,283,"Move Zeroes","63.7%","Easy","Arrays / Hashing",false],
+  [64,13,"Roman to Integer","66.4%","Easy","String",false],
+  [66,36,"Valid Sudoku","64.3%","Medium","Matrix / Grid",false],
+  [67,62,"Unique Paths","66.7%","Medium","Dynamic Programming",false],
+  [69,138,"Copy List with Random Pointer","62.6%","Medium","Linked List",false],
+  [70,143,"Reorder List","64.8%","Medium","Linked List",false],
+  [72,424,"Longest Repeating Character Replacement","59.2%","Medium","Sliding Window / Two Pointers",false],
+  [74,6,"Zigzag Conversion","53.7%","Medium","String",false],
+  [75,19,"Remove Nth Node From End of List","51.2%","Medium","Linked List",false],
+  [76,45,"Jump Game II","42.6%","Medium","Sorting / Greedy",false],
+  [77,54,"Spiral Matrix","56.4%","Medium","Matrix / Grid",false],
+  [78,124,"Binary Tree Maximum Path Sum","42.1%","Hard","Trees",false],
+  [79,198,"House Robber","53.0%","Medium","Dynamic Programming",false],
+  [81,735,"Asteroid Collision","47.4%","Medium","Stack / Monotonic Stack",false],
+  [82,1004,"Max Consecutive Ones III","67.4%","Medium","Sliding Window / Two Pointers",false],
+  [84,34,"Find First and Last Position of Element in Sorted Array","48.5%","Medium","Binary Search",false],
+  [86,135,"Candy","48.1%","Hard","Sorting / Greedy",false],
+  [88,209,"Minimum Size Subarray Sum","51.3%","Medium","Sliding Window / Two Pointers",false],
+  [89,238,"Product of Array Except Self","68.7%","Medium","Arrays / Hashing",false],
+  [91,297,"Serialize and Deserialize Binary Tree","60.5%","Hard","Trees",false],
+  [92,322,"Coin Change","48.1%","Medium","Dynamic Programming",false],
+  [94,485,"Max Consecutive Ones","64.8%","Easy","Arrays / Hashing",false],
+  [95,496,"Next Greater Element I","75.9%","Easy","Stack / Monotonic Stack",false],
+  [98,58,"Length of Last Word","58.5%","Easy","String",false],
+  [99,76,"Minimum Window Substring","47.1%","Hard","Sliding Window / Two Pointers",false],
+  [100,98,"Validate Binary Search Tree","35.5%","Medium","Trees",false],
+  [103,139,"Word Break","49.2%","Medium","Dynamic Programming",false],
+  [104,151,"Reverse Words in a String","55.8%","Medium","String",false],
+  [105,199,"Binary Tree Right Side View","69.7%","Medium","Trees",false],
+  [106,215,"Kth Largest Element in an Array","68.8%","Medium","Sorting / Greedy",false],
+  [107,253,"Meeting Rooms II","52.6%","Medium","Sorting / Greedy",false],
+  [108,295,"Find Median from Data Stream","54.3%","Hard","Sorting / Greedy",false],
+  [109,503,"Next Greater Element II","68.1%","Medium","Stack / Monotonic Stack",false],
+  [112,39,"Combination Sum","76.2%","Medium","Backtracking / Recursion",false],
+  [113,46,"Permutations","81.7%","Medium","Backtracking / Recursion",false],
+  [114,55,"Jump Game","40.6%","Medium","Sorting / Greedy",false],
+  [115,67,"Add Binary","57.8%","Easy","String",false],
+  [116,73,"Set Matrix Zeroes","62.6%","Medium","Matrix / Grid",false],
+  [117,84,"Largest Rectangle in Histogram","49.5%","Hard","Stack / Monotonic Stack",false],
+  [118,122,"Best Time to Buy and Sell Stock II","70.9%","Medium","Dynamic Programming",false],
+  [119,134,"Gas Station","47.7%","Medium","Sorting / Greedy",false],
+  [121,206,"Reverse Linked List","80.4%","Easy","Linked List",false],
+  [123,543,"Diameter of Binary Tree","65.2%","Easy","Trees",false],
+  [125,621,"Task Scheduler","62.8%","Medium","Sorting / Greedy",false],
+  [127,658,"Find K Closest Elements","49.5%","Medium","Binary Search",false],
+  [128,852,"Peak Index in a Mountain Array","66.9%","Medium","Binary Search",false],
+  [129,1011,"Capacity To Ship Packages Within D Days","73.6%","Medium","Binary Search",false],
+  [130,32,"Longest Valid Parentheses","38.3%","Hard","Stack / Monotonic Stack",false],
+  [134,212,"Word Search II","38.2%","Hard","Backtracking / Recursion",false],
+  [136,410,"Split Array Largest Sum","60.0%","Hard","Dynamic Programming",false],
+  [139,696,"Count Binary Substrings","70.3%","Easy","String",false],
+  [140,739,"Daily Temperatures","68.5%","Medium","Stack / Monotonic Stack",false],
+  [145,987,"Vertical Order Traversal of a Binary Tree","53.4%","Hard","Trees",false],
+  [155,219,"Contains Duplicate II","51.0%","Easy","Arrays / Hashing",false],
+  [157,240,"Search a 2D Matrix II","57.0%","Medium","Matrix / Grid",false],
+  [158,300,"Longest Increasing Subsequence","59.2%","Medium","Dynamic Programming",false],
+  [162,567,"Permutation in String","48.6%","Medium","Sliding Window / Two Pointers",false],
+  [163,931,"Minimum Falling Path Sum","60.8%","Medium","Dynamic Programming",false],
+  [164,981,"Time Based Key-Value Store","49.8%","Medium","Design",false],
+  [167,1423,"Maximum Points You Can Obtain from Cards","57.4%","Medium","Sliding Window / Two Pointers",false],
+  [171,1482,"Minimum Number of Days to Make m Bouquets","56.4%","Medium","Binary Search",false],
+  [178,72,"Edit Distance","60.3%","Medium","Dynamic Programming",false],
+  [181,131,"Palindrome Partitioning","73.8%","Medium","Backtracking / Recursion",false],
+  [182,133,"Clone Graph","64.9%","Medium","Graph / BFS / DFS",false],
+  [184,152,"Maximum Product Subarray","36.1%","Medium","Dynamic Programming",false],
+  [185,179,"Largest Number","42.7%","Medium","Sorting / Greedy",false],
+  [189,312,"Burst Balloons","63.1%","Hard","Dynamic Programming",false],
+  [193,547,"Number of Provinces","70.1%","Medium","Graph / BFS / DFS",false],
+  [200,863,"All Nodes Distance K in Binary Tree","67.5%","Medium","Trees",false],
+  [209,57,"Insert Interval","44.9%","Medium","Sorting / Greedy",false],
+  [210,63,"Unique Paths II","44.3%","Medium","Dynamic Programming",false],
+  [211,64,"Minimum Path Sum","68.0%","Medium","Dynamic Programming",false],
+  [213,92,"Reverse Linked List II","51.2%","Medium","Linked List",false],
+  [214,99,"Recover Binary Search Tree","59.1%","Medium","Trees",false],
+  [217,130,"Surrounded Regions","44.9%","Medium","Graph / BFS / DFS",false],
+  [219,140,"Word Break II","55.2%","Hard","Dynamic Programming",false],
+  [223,210,"Course Schedule II","55.1%","Medium","Graph / BFS / DFS",false],
+  [225,226,"Invert Binary Tree","79.9%","Easy","Trees",false],
+  [226,235,"Lowest Common Ancestor of a BST","70.2%","Medium","Trees",false],
+  [233,416,"Partition Equal Subset Sum","49.3%","Medium","Dynamic Programming",false],
+  [234,417,"Pacific Atlantic Water Flow","60.7%","Medium","Graph / BFS / DFS",false],
+  [235,443,"String Compression","59.7%","Medium","String",false],
+  [239,518,"Coin Change II","60.3%","Medium","Dynamic Programming",false],
+  [242,721,"Accounts Merge","61.0%","Medium","Graph / BFS / DFS",false],
+  [248,1008,"Construct BST from Preorder Traversal","84.1%","Medium","Trees",false],
+  [249,1091,"Shortest Path in Binary Matrix","51.2%","Medium","Graph / BFS / DFS",false],
+  [252,1382,"Balance a Binary Search Tree","86.3%","Medium","Trees",false],
+  [255,2385,"Amount of Time for Binary Tree to Be Infected","65.2%","Medium","Trees",false],
+  [259,24,"Swap Nodes in Pairs","69.1%","Medium","Linked List",false],
+  [261,59,"Spiral Matrix II","74.8%","Medium","Matrix / Grid",false],
+  [263,91,"Decode Ways","37.7%","Medium","Dynamic Programming",false],
+  [266,102,"Binary Tree Level Order Traversal","72.3%","Medium","Trees",false],
+  [267,103,"Binary Tree Zigzag Level Order Traversal","63.3%","Medium","Trees",false],
+  [268,104,"Maximum Depth of Binary Tree","78.0%","Easy","Trees",false],
+  [280,221,"Maximal Square","50.1%","Medium","Dynamic Programming",false],
+  [283,269,"Alien Dictionary","37.1%","Hard","Graph / BFS / DFS",false],
+  [285,329,"Longest Increasing Path in a Matrix","56.4%","Hard","Matrix / Grid",false],
+  [291,392,"Is Subsequence","48.9%","Easy","String",false],
+  [292,394,"Decode String","62.4%","Medium","Stack / Monotonic Stack",false],
+  [293,402,"Remove K Digits","36.5%","Medium","Stack / Monotonic Stack",false],
+  [306,704,"Binary Search","60.6%","Easy","Binary Search",false],
+  [310,827,"Making A Large Island","56.4%","Hard","Graph / BFS / DFS",false],
+  [311,853,"Car Fleet","54.9%","Medium","Stack / Monotonic Stack",false],
+  [318,1235,"Maximum Profit in Job Scheduling","54.7%","Hard","Dynamic Programming",false],
+  [321,1319,"Number of Operations to Make Network Connected","66.3%","Medium","Graph / BFS / DFS",false],
+  [374,442,"Find All Duplicates in an Array","76.8%","Medium","Arrays / Hashing",false],
+  // ── Amazon OA 2026 DS&A questions (not standard LC) ──
+  [500,null,"Min Cost To Add New Roads","—","Hard","Graph / BFS / DFS",true],
+  [501,null,"Get DNA Sequence","—","Medium","Sliding Window / Two Pointers",true],
+  [502,null,"Get Number of Teams (Pairs of Candidates)","—","Medium","Sorting / Greedy",true],
+  [503,null,"Distribute Parcels / Minimize Maximum Parcels","—","Medium","Binary Search",true],
+  [504,null,"Maximum Precipitation","—","Medium","Arrays / Hashing",true],
+  [505,null,"Get Maximum Greyness","—","Medium","Matrix / Grid",true],
+  [506,null,"Find Minimum Load Index","—","Medium","Arrays / Hashing",true],
+  [507,null,"Execute Processes","—","Medium","Sorting / Greedy",true],
+  [508,null,"Make The Array Positive","—","Medium","Arrays / Hashing",true],
+  [509,null,"Server Security Level Grouping","—","Medium","Arrays / Hashing",true],
+  [510,null,"Maximum Bandwidth Contribution","—","Medium","Sorting / Greedy",true],
+];
+
+const CAT_META = {
+  "Arrays / Hashing":             { color: "#636EFA", emoji: "🗂️" },
+  "Dynamic Programming":          { color: "#EF553B", emoji: "📐" },
+  "Sliding Window / Two Pointers":{ color: "#AB63FA", emoji: "🪟" },
+  "Stack / Monotonic Stack":      { color: "#B6E880", emoji: "📚" },
+  "Sorting / Greedy":             { color: "#FECB52", emoji: "🔢" },
+  "Binary Search":                { color: "#00CC96", emoji: "🔍" },
+  "Trees":                        { color: "#19D3F3", emoji: "🌳" },
+  "Graph / BFS / DFS":            { color: "#FF6692", emoji: "🕸️" },
+  "String":                       { color: "#72B7B2", emoji: "🔤" },
+  "Linked List":                  { color: "#FFA15A", emoji: "🔗" },
+  "Backtracking / Recursion":     { color: "#FF97FF", emoji: "🔄" },
+  "Matrix / Grid":                { color: "#E45756", emoji: "🔲" },
+  "Design":                       { color: "#54A24B", emoji: "⚙️" },
+};
+
+const DIFF_COLOR = { Easy:"#00b8a3", Medium:"#ffc01e", Hard:"#ff375f" };
+const DIFF_BG    = { Easy:"#003d37", Medium:"#3d2f00", Hard:"#3d0010" };
+
+const OA_PROBLEMS = {
+  "Min Cost To Add New Roads": {
+    desc: "Given n cities and a list of existing roads (undirected edges with no cost), and a list of candidate new roads each with a cost, return the minimum total cost to make all cities connected. Return -1 if impossible.",
+    example: `Input: n=4, existing=[[1,2],[2,3]], newRoads=[[1,3,5],[1,4,3],[3,4,2]]
+Output: 5  (add roads 3→4 cost 2 and 1→4 cost 3)`,
+    pattern: "Union-Find: collapse existing connected components first, then run Kruskal's on candidate new roads. O(E log E).",
+    hint: "Sort new roads by cost. Use Union-Find with path compression + union by rank. Skip edges where both endpoints share a root.",
+  },
+  "Get DNA Sequence": {
+    desc: "Given a DNA string s and integer k, return all length-k substrings that appear more than once, in the order they first repeat.",
+    example: `Input: s="AAAAACCCCCAAAAACCCCCCAAAAAGGGTTT", k=10
+Output: ["AAAAACCCCC","CCCCCAAAAA"]`,
+    pattern: "Sliding window of size k + HashSet to track seen substrings, HashSet to track already-added answers.",
+    hint: "Use a rolling hash for O(n) or just substring hashing with a dict. Two sets: seen and repeated.",
+  },
+  "Get Number of Teams (Pairs of Candidates)": {
+    desc: "Given an array of candidate scores and a threshold T, count the number of pairs (i, j) with i < j such that scores[i] + scores[j] >= T.",
+    example: `Input: scores=[2,5,8,3,6], T=10
+Output: 4  (pairs: (2,8),(5,8),(5,6),(8,6) wait — (5,8)=13,(8,3)=11,(8,6)=14,(5,6)=11 → 4)`,
+    pattern: "Sort + two pointers. For each left pointer, binary search or right-pointer sweep to count valid partners.",
+    hint: "Sort ascending. Two pointers lo=0, hi=n-1. When scores[lo]+scores[hi]>=T, all pairs from lo..hi-1 with hi are valid → count += (hi-lo), hi--. Else lo++.",
+  },
+  "Distribute Parcels / Minimize Maximum Parcels": {
+    desc: "Given n packages with weights and k delivery trucks, assign all packages to trucks to minimize the maximum load on any single truck. Packages must be assigned in order (contiguous groups).",
+    example: `Input: weights=[1,2,3,4,5,6,7,8,9,10], k=5
+Output: 15`,
+    pattern: "Binary search on the answer (max load). Feasibility check: greedily assign packages until adding next exceeds mid.",
+    hint: "lo=max(weights), hi=sum(weights). Binary search mid. Check if we can split into ≤ k groups each ≤ mid. Same as LC 1011.",
+  },
+  "Maximum Precipitation": {
+    desc: "Given daily precipitation readings for n days and a window size w, return the maximum total precipitation over any contiguous window of exactly w days.",
+    example: `Input: rain=[1,3,2,6,4,8,2,5], w=3
+Output: 18  (window [6,4,8])`,
+    pattern: "Sliding window of fixed size w. Maintain running sum, subtract outgoing, add incoming.",
+    hint: "Compute prefix sum first. Answer = max(prefix[i+w] - prefix[i]) for i in 0..n-w.",
+  },
+  "Get Maximum Greyness": {
+    desc: "Given an m×n matrix of 0s and 1s, find the submatrix with the maximum number of 1s. Return that count.",
+    example: `Input: grid=[[1,0,1],[1,1,0],[0,1,1]]
+Output: 6  (entire matrix has six 1s) — or if asking for contiguous: use 2D prefix sums`,
+    pattern: "2D prefix sums. For each pair of row boundaries, reduce to a 1D maximum subarray problem.",
+    hint: "Build prefix[i][j] = count of 1s in top-left to (i,j). Then for each column pair, compute row-wise prefix diff and run Kadane's.",
+  },
+  "Find Minimum Load Index": {
+    desc: "Given a list of server loads updated in real time, after each update return the index of the server with the minimum load. Break ties by smallest index.",
+    example: `Input: updates=[(0,5),(1,3),(2,7),(1,1)], n=3
+Output: [0,1,1,1] → after each update, min-load server index`,
+    pattern: "Maintain a loads array. After each update, linear scan for min (O(n)) or use a heap with lazy deletion for O(log n).",
+    hint: "For small n, simple array scan is fine. For large n, use a TreeMap or sorted structure keyed by (load, index).",
+  },
+  "Execute Processes": {
+    desc: "Given a list of processes, each with an arrival time, burst time, and priority, simulate a priority-based preemptive scheduler. Return the order in which processes complete.",
+    example: `Input: processes=[(id=1,arr=0,burst=5,pri=2),(id=2,arr=1,burst=3,pri=1),(id=3,arr=2,burst=2,pri=3)]
+Output: [2,3,1]  (id=2 highest priority runs first, then id=3, then id=1)`,
+    pattern: "Min-heap (priority queue) keyed on priority. At each time tick, add arrived processes to heap, pop highest priority.",
+    hint: "Simulate time. Use heapq with (priority, arrival, id) tuples. Run the top process until completion or preemption.",
+  },
+  "Make The Array Positive": {
+    desc: "Given an integer array, you may increment any element by 1. Return the minimum number of increments needed so that every contiguous subarray of length > 1 has a non-negative sum.",
+    example: `Input: nums=[-3, 1, -2, 4]
+Output: 4  (increment -3 by 3 and -2 by 1)`,
+    pattern: "Greedy with running prefix sum. When prefix sum goes negative, record the deficit and reset. Total increments = sum of all deficits.",
+    hint: "Track running sum. If running_sum < 0: increments += abs(running_sum); running_sum = 0. O(n).",
+  },
+  "Server Security Level Grouping": {
+    desc: "Given n servers each with a security level (integer), split them into exactly k groups of near-equal size such that the variance (max_level - min_level) within each group is minimized. Return the minimum total variance across all groups.",
+    example: `Input: levels=[1,3,5,2,8,6], k=2
+Output: 5  (groups [1,2,3] variance=2 and [5,6,8] variance=3, total=5)`,
+    pattern: "Sort levels. Optimal grouping of sorted array into k contiguous groups. DP or greedy: dp[i][j] = min variance for first i elements in j groups.",
+    hint: "Sort first. For k groups of sorted array, contiguous grouping is optimal. DP: dp[j][g] = min variance using first j servers in g groups.",
+  },
+  "Maximum Bandwidth Contribution": {
+    desc: "Given n servers each with a bandwidth value and k cables to connect them in pairs, pair up servers to maximize the total bandwidth of selected pairs. Each server can be in at most one pair.",
+    example: `Input: bandwidths=[10,5,8,3,9,2], k=2
+Output: 27  (pair (10,9)=19 and (8,5)=13 → no wait, sum = 10+9+8+5=32? Re-read: sum of paired bandwidths)
+Correct: pair (10,9) contributes 19, pair (8,5) contributes 13 → 32`,
+    pattern: "Sort descending. Greedily pair adjacent elements: (bandwidths[0]+bandwidths[1]), (bandwidths[2]+bandwidths[3]) … take top k pairs.",
+    hint: "Sort desc. Sum of first 2k elements, grouped in pairs. This greedy is optimal — proof by exchange argument.",
+  },
+};
+
+const HINTS = {
+  1:"Hash map: store (target-num) as you iterate.",
+  3:"Sliding window + set. Expand right, shrink left on duplicate.",
+  42:"Monotonic stack. Pop when current bar taller than top, compute trapped water.",
+  146:"HashMap + doubly-linked list. Head=LRU, Tail=MRU.",
+  11:"Two pointers from both ends. Move shorter side inward.",
+  2:"Traverse both lists with a carry variable.",
+  14:"Trie walk until branch point, or compare chars column by column.",
+  121:"Track min price; profit = price - minPrice.",
+  5:"Expand around center for each char and pair. O(n²).",
+  15:"Sort. Fix one, two-pointer for rest. Skip duplicates.",
+  200:"BFS/DFS from each unvisited '1'. Mark visited.",
+  875:"Binary search on speed in [1, max(piles)].",
+  4:"Binary search on smaller array. Partition so left half = (m+n)/2 elements.",
+  56:"Sort by start. Merge when current.start ≤ prev.end.",
+  49:"Sort chars of each word as key → HashMap.",
+  23:"Min-heap of (val, node). Pop min, push next.",
+  169:"Boyer-Moore Voting: candidate + count.",
+  128:"Set + count streaks only from stream starts.",
+  560:"Prefix sum + HashMap. Count prefix sums == (sum - k).",
+  9:"Reverse second half of digits, compare.",
+  20:"Stack: push opens, pop+match on closes.",
+  22:"Backtrack: add '(' if open<n, ')' if close<open.",
+  17:"Backtrack over digit→letters map.",
+  21:"Compare heads, attach smaller, recurse.",
+  70:"dp[i]=dp[i-1]+dp[i-2].",
+  136:"XOR all. Pairs cancel.",
+  162:"Binary search: if mid>mid+1 go left, else right.",
+  994:"Multi-source BFS from all rotten oranges.",
+  33:"Binary search: find sorted half, check if target inside.",
+  69:"Binary search for floor(sqrt(x)).",
+  904:"Sliding window, at most 2 fruit types.",
+  41:"Index marking: negate nums[|num|-1]. Scan for first positive index.",
+  53:"Kadane's: running max sum.",
+  236:"LCA: return root if root==p or q. LCA where both sides non-null.",
+  239:"Monotonic deque of indices.",
+  1929:"return nums+nums",
+  79:"DFS+backtracking, mark '#' in-place.",
+  51:"Backtrack row by row, track col+diag sets.",
+  88:"Merge from end backwards.",
+  767:"Max-heap by freq, alternate.",
+  26:"Two pointers: slow=unique end, fast scans.",
+  35:"Standard binary search, return lo.",
+  242:"Count chars or sort both.",
+  347:"Bucket sort by freq or min-heap size k.",
+  18:"Sort, fix 2, two-pointer for inner 2.",
+  28:"KMP or built-in.",
+  75:"Dutch National Flag 3-way partition.",
+  78:"2^n bitmask or backtrack include/exclude.",
+  155:"Min-stack: push to aux when ≤ current min.",
+  217:"Set; size < len → duplicate.",
+  31:"Find rightmost asc pair, swap next greater, reverse suffix.",
+  74:"Binary search: treat as 1D array.",
+  207:"Topological sort / DFS cycle detection.",
+  283:"Two pointers: fill non-zeros, pad zeros.",
+  13:"Map values; subtract 2*prev if cur>prev.",
+  36:"Sets for row/col/box. Box=(r/3)*3+c/3.",
+  62:"dp[i][j]=dp[i-1][j]+dp[i][j-1].",
+  138:"Two passes: create nodes, then wire.",
+  143:"Find mid, reverse second half, merge.",
+  424:"Window valid when len-maxFreq≤k.",
+  6:"Row index zigzag, concat rows.",
+  19:"Fast n+1 ahead, then move both.",
+  45:"Greedy: track reach and next reach.",
+  54:"Direction array, shrink boundaries.",
+  124:"DFS: gain=max(0,L)+max(0,R)+val.",
+  198:"dp[i]=max(dp[i-2]+nums[i], dp[i-1]).",
+  735:"Stack: negative destroys positive top.",
+  1004:"Sliding window: zeros≤k.",
+  34:"Two binary searches: leftmost and rightmost.",
+  135:"Two passes: L→R then R→L.",
+  209:"Sliding window: shrink while sum≥target.",
+  238:"Left pass then right pass products.",
+  297:"BFS/DFS serialization with '#' for null.",
+  322:"dp[i]=min(dp[i-coin]+1).",
+  485:"Single pass, track consecutive ones.",
+  496:"Monotonic stack + HashMap.",
+  58:"Trim right, scan left for space.",
+  76:"Sliding window with char count map.",
+  98:"DFS with min/max bounds.",
+  139:"dp[i]=true if dp[j] true and word[j..i] in dict.",
+  151:"Split, filter, reverse, join.",
+  199:"BFS level order, record last per level.",
+  215:"QuickSelect O(n) avg or min-heap size k.",
+  253:"Sort, min-heap of end times.",
+  295:"Two heaps: max lower, min upper.",
+  503:"Monotonic stack, iterate 2n with mod.",
+  39:"Backtrack with reuse, prune sum>target.",
+  46:"Backtrack: swap current with each following.",
+  55:"Greedy: track max reach.",
+  67:"Binary addition right-to-left.",
+  73:"Record zero rows/cols, then zero them.",
+  84:"Monotonic stack for area.",
+  122:"Greedy: capture every uptick.",
+  134:"Greedy: if total gas≥cost, solution exists.",
+  206:"Prev→curr→next pointer dance.",
+  543:"DFS: diameter=max(L+R).",
+  621:"max(n,(maxFreq-1)*(k+1)+count).",
+  658:"Binary search left boundary, take k.",
+  852:"Binary search: if mid<mid+1 go right.",
+  1011:"Binary search capacity, greedy check.",
+  32:"Stack of indices, -1 as base.",
+  212:"Trie+DFS on board.",
+  410:"Binary search on max sum.",
+  739:"Monotonic stack of indices.",
+  987:"DFS collect (col,depth,val), sort.",
+  300:"dp[i]=1+max(dp[j]) where nums[j]<nums[i].",
+  981:"HashMap → sorted timestamps → binary search.",
+  1423:"Total sum - min window of n-k.",
+  1482:"Binary search on days.",
+  72:"dp[i][j] = edit distance.",
+  131:"Backtrack: check palindrome, recurse.",
+  133:"BFS/DFS with clone map.",
+  152:"Track max and min product.",
+  179:"Custom comparator: a+b vs b+a.",
+  312:"dp[i][j]=max coins between i and j.",
+  547:"Union-Find or DFS components.",
+  57:"Binary search insert, merge neighbors.",
+  63:"dp skip obstacles.",
+  64:"dp min path.",
+  92:"Reverse between (m-1)th and (n+1)th.",
+  99:"Morris inorder, find swapped nodes.",
+  130:"BFS from border Os, flip rest.",
+  140:"Backtrack + memo.",
+  210:"Kahn's topological sort.",
+  226:"Swap children recursively.",
+  235:"BST: go left if both<root, right if both>root.",
+  416:"0/1 knapsack.",
+  417:"BFS from both borders.",
+  443:"Two-pointer in-place compress.",
+  518:"Unbounded knapsack.",
+  721:"Union-Find by email.",
+  1091:"BFS from (0,0).",
+  1382:"Inorder to array, build balanced BST.",
+  2385:"BFS: max distance from infected node.",
+  24:"Pair reversal: prev→second→first→next.",
+  59:"Simulate, shrink boundaries.",
+  91:"dp[i]=dp[i-1]+dp[i-2] with '0'/'26' checks.",
+  102:"BFS level by level.",
+  103:"BFS + alternate direction flag.",
+  104:"1+max(left,right) recursively.",
+  221:"dp[i][j]=min(up,left,diag)+1.",
+  269:"Topo sort from char diffs.",
+  285:"DFS+memo on grid.",
+  392:"Two pointers advance on match.",
+  394:"Stack: push multiplier+string on '[', pop on ']'.",
+  402:"Monotonic increasing stack, remove k.",
+  704:"lo=0,hi=n-1,mid=(lo+hi)/2.",
+  827:"Union-Find, check water cell neighbors.",
+  853:"Stack of fleet speeds.",
+  1235:"dp+binary search by end time.",
+  1319:"Union-Find, need n-1 edges.",
+  1339:"DFS: product=sub*(total-sub).",
+  442:"Negate at index |num|-1 to mark.",
+};
+
+const QUIZ_SEQUENCE = [...ALL_QUESTIONS].sort((a,b) => a[0]-b[0]);
+const TOTAL = QUIZ_SEQUENCE.length;
+const PER_BATCH = 5;
+
+function AmazonDSAQuiz() {
+  const [answered, setAnswered] = useState({});
+  const [batchIdx, setBatchIdx] = useState(0);
+  const [showHint, setShowHint] = useState({});
+  const [showProblem, setShowProblem] = useState({});
+  const [view, setView] = useState("quiz");
+
+  const currentBatch = QUIZ_SEQUENCE.slice(batchIdx*PER_BATCH, (batchIdx+1)*PER_BATCH);
+  const totalBatches = Math.ceil(TOTAL/PER_BATCH);
+  const mark = (rank, status) => setAnswered(prev=>({...prev,[rank]:status}));
+  const toggleHint = rank => setShowHint(prev=>({...prev,[rank]:!prev[rank]}));
+  const toggleProblem = rank => setShowProblem(prev=>({...prev,[rank]:!prev[rank]}));
+  const allBatchAnswered = currentBatch.every(q=>answered[q[0]]);
+
+  const solved   = Object.values(answered).filter(v=>v==="solved").length;
+  const unsolved = Object.values(answered).filter(v=>v==="unsolved").length;
+  const skipped  = Object.values(answered).filter(v=>v==="skip").length;
+  const total_done = solved+unsolved+skipped;
+  const pct = Math.round((total_done/TOTAL)*100);
+
+  const catCounts = {};
+  QUIZ_SEQUENCE.forEach(q=>{ catCounts[q[5]]=(catCounts[q[5]]||0)+1; });
+  const catProgress = {};
+  Object.keys(catCounts).forEach(cat=>{
+    const qs = QUIZ_SEQUENCE.filter(q=>q[5]===cat);
+    catProgress[cat]={total:qs.length,solved:qs.filter(q=>answered[q[0]]==="solved").length,unsolved:qs.filter(q=>answered[q[0]]==="unsolved").length,skip:qs.filter(q=>answered[q[0]]==="skip").length};
+  });
+
+  const qPerDay = Math.ceil(TOTAL/9);
+  const currentDay = Math.min(9, Math.floor(total_done/qPerDay)+1);
+
+  const S = {
+    app:{minHeight:"100vh",background:"linear-gradient(135deg,#0f1117,#1a1d27)",color:"#e0e0e0",fontFamily:"'Segoe UI',Arial,sans-serif"},
+    hdr:{background:"#1a1d27",borderBottom:"1px solid #2a2d3a",padding:"14px 24px",display:"flex",alignItems:"center",justifyContent:"space-between",flexWrap:"wrap",gap:"10px",position:"sticky",top:0,zIndex:100},
+    navBtn:a=>({padding:"6px 14px",borderRadius:"20px",border:"none",cursor:"pointer",fontWeight:600,fontSize:"0.82rem",background:a?"#636EFA":"#252836",color:a?"#fff":"#aaa"}),
+    pBar:{background:"#252836",borderRadius:"8px",height:"6px",width:"150px",overflow:"hidden"},
+    pFill:{height:"100%",background:"linear-gradient(90deg,#636EFA,#EF553B)",borderRadius:"8px",width:`${pct}%`,transition:"width 0.4s"},
+    main:{maxWidth:"860px",margin:"0 auto",padding:"20px 14px"},
+    batchNav:{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:"16px",background:"#1a1d27",borderRadius:"12px",padding:"14px 18px"},
+    card:s=>({background:s==="solved"?"#0f2a27":s==="unsolved"?"#2a0f13":s==="skip"?"#2a2008":"#1a1d27",borderRadius:"14px",padding:"18px",marginBottom:"12px",border:`1px solid ${s==="solved"?"#00b8a340":s==="unsolved"?"#ff375f40":s==="skip"?"#ffc01e40":"#2a2d3a"}`}),
+    badge:(bg,c)=>({background:bg,color:c,padding:"2px 8px",borderRadius:"6px",fontSize:"0.72rem",fontWeight:600,display:"inline-block"}),
+    btn:(border,bg,c)=>({padding:"7px 13px",borderRadius:"8px",border:`1px solid ${border}`,background:bg,color:c,cursor:"pointer",fontSize:"0.79rem",fontWeight:600}),
+    hintBox:{marginTop:"12px",background:"#252836",borderRadius:"10px",padding:"12px 14px",borderLeft:"3px solid #636EFA",fontSize:"0.83rem",color:"#ccc",lineHeight:1.6},
+    problemBox:{marginTop:"12px",background:"#1a2035",borderRadius:"10px",padding:"14px 16px",borderLeft:"3px solid #AB63FA",fontSize:"0.83rem",color:"#ccc",lineHeight:1.7},
+  };
+
+  if (view==="progress") return (
+    <div style={S.app}>
+      <div style={S.hdr}>
+        <div style={{fontSize:"1.1rem",fontWeight:700,color:"#fff"}}>🚀 DS&A Quiz — Progress</div>
+        <div style={{display:"flex",gap:"8px",alignItems:"center",flexWrap:"wrap"}}>
+          <button style={S.navBtn(false)} onClick={()=>setView("quiz")}>📝 Quiz</button>
+          <button style={S.navBtn(true)}>📊 Progress</button>
+          <div><div style={S.pBar}><div style={S.pFill}/></div><div style={{fontSize:"0.68rem",color:"#777",textAlign:"center",marginTop:"2px"}}>{pct}%</div></div>
+        </div>
+      </div>
+      <div style={S.main}>
+        <div style={{background:"#1a1d27",borderRadius:"12px",padding:"16px",border:"1px solid #2a2d3a",marginBottom:"18px"}}>
+          <div style={{fontSize:"0.83rem",color:"#aaa",marginBottom:"10px"}}>📅 9-Day Plan (4/19–4/27) — ~{qPerDay} DS&A questions/day</div>
+          <div style={{display:"flex",gap:"8px",flexWrap:"wrap"}}>
+            {[1,2,3,4,5,6,7,8,9].map(day=>{
+              const dayQs=QUIZ_SEQUENCE.slice((day-1)*qPerDay,Math.min(day*qPerDay,TOTAL));
+              const daySolved=dayQs.filter(q=>answered[q[0]]).length;
+              const isDone=daySolved===dayQs.length;
+              const isCur=day===currentDay;
+              return <div key={day} style={{flex:"1 1 60px",background:isDone?"#0f2a27":isCur?"#252836":"#1e2030",border:`1px solid ${isDone?"#00b8a3":isCur?"#636EFA":"#2a2d3a"}`,borderRadius:"10px",padding:"8px",textAlign:"center"}}>
+                <div style={{fontSize:"0.75rem",fontWeight:700,color:isDone?"#00b8a3":isCur?"#636EFA":"#aaa"}}>{isDone?"✅":isCur?"⚡":"📋"} D{day}</div>
+                <div style={{fontSize:"1rem",fontWeight:800,color:"#fff",marginTop:"4px"}}>{daySolved}/{dayQs.length}</div>
+              </div>;
+            })}
+          </div>
+        </div>
+        <div style={{display:"flex",gap:"10px",flexWrap:"wrap",marginBottom:"18px"}}>
+          {[["#00b8a3",solved,"✅ Solved"],["#ff375f",unsolved,"❌ Review"],["#ffc01e",skipped,"⏭️ Skipped"],["#636EFA",TOTAL-total_done,"⏳ Left"]].map(([c,n,l])=>(
+            <div key={l} style={{flex:"1 1 110px",background:"#1a1d27",borderRadius:"12px",padding:"14px",border:`1px solid ${c}33`,textAlign:"center"}}>
+              <div style={{fontSize:"1.7rem",fontWeight:800,color:c}}>{n}</div>
+              <div style={{fontSize:"0.74rem",color:"#777",marginTop:"4px"}}>{l}</div>
+            </div>
+          ))}
+        </div>
+        <div style={{fontSize:"0.95rem",fontWeight:700,color:"#fff",marginBottom:"10px"}}>Category Progress</div>
+        {Object.entries(catProgress).sort((a,b)=>b[1].total-a[1].total).map(([cat,cp])=>{
+          const meta=CAT_META[cat]||{color:"#888",emoji:"📌"};
+          const donePct=cp.total>0?Math.round(((cp.solved+cp.unsolved+cp.skip)/cp.total)*100):0;
+          return <div key={cat} style={{background:"#1a1d27",borderRadius:"10px",padding:"12px 16px",marginBottom:"8px",border:"1px solid #2a2d3a"}}>
+            <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:"8px"}}>
+              <span style={{fontWeight:600,fontSize:"0.87rem"}}>{meta.emoji} {cat}</span>
+              <div style={{display:"flex",gap:"8px",fontSize:"0.74rem"}}>
+                <span style={{color:"#00b8a3"}}>{cp.solved}✓</span>
+                <span style={{color:"#ff375f"}}>{cp.unsolved}✗</span>
+                <span style={{color:"#ffc01e"}}>{cp.skip}⏭</span>
+                <span style={{color:"#555"}}>/{cp.total}</span>
+              </div>
+            </div>
+            <div style={{background:"#252836",borderRadius:"4px",height:"6px",overflow:"hidden"}}>
+              <div style={{height:"100%",width:`${donePct}%`,background:`linear-gradient(90deg,${meta.color},${meta.color}88)`,borderRadius:"4px",transition:"width 0.4s"}}/>
+            </div>
+          </div>;
+        })}
+      </div>
+    </div>
+  );
+
+  return (
+    <div style={S.app}>
+      <div style={S.hdr}>
+        <div style={{fontSize:"1.1rem",fontWeight:700,color:"#fff",display:"flex",alignItems:"center",gap:"8px"}}>
+          🚀 DS&amp;A Quiz <span style={{fontSize:"0.76rem",color:"#888",fontWeight:400}}>{TOTAL} questions · {TOTAL-ALL_QUESTIONS.filter(q=>!q[6]).length} Amazon OA</span>
+        </div>
+        <div style={{display:"flex",gap:"8px",alignItems:"center",flexWrap:"wrap"}}>
+          <button style={S.navBtn(true)}>📝 Quiz</button>
+          <button style={S.navBtn(false)} onClick={()=>setView("progress")}>📊 Progress</button>
+          <div><div style={S.pBar}><div style={S.pFill}/></div><div style={{fontSize:"0.68rem",color:"#777",textAlign:"center",marginTop:"2px"}}>{total_done}/{TOTAL} ({pct}%)</div></div>
+        </div>
+      </div>
+      <div style={S.main}>
+        <div style={S.batchNav}>
+          <div>
+            <div style={{fontWeight:700,fontSize:"1rem",color:"#fff"}}>Batch {batchIdx+1} / {totalBatches}</div>
+            <div style={{fontSize:"0.83rem",color:"#aaa"}}>Questions {batchIdx*PER_BATCH+1}–{Math.min((batchIdx+1)*PER_BATCH,TOTAL)}</div>
+          </div>
+          <div style={{display:"flex",gap:"8px"}}>
+            <button style={{...S.btn("#636EFA","#1e2030","#636EFA"),opacity:batchIdx===0?0.3:1}} onClick={()=>batchIdx>0&&setBatchIdx(b=>b-1)}>← Prev</button>
+            <button style={{...S.btn("#00b8a3","#003d37","#00b8a3"),opacity:batchIdx>=totalBatches-1?0.3:1}} onClick={()=>batchIdx<totalBatches-1&&setBatchIdx(b=>b+1)}>Next →</button>
+          </div>
+        </div>
+
+        <div style={{background:"#1a1d2799",borderRadius:"10px",padding:"9px 14px",marginBottom:"14px",fontSize:"0.77rem",color:"#888",display:"flex",flexWrap:"wrap",gap:"6px",alignItems:"center"}}>
+          <span>🎯</span>
+          {[...new Set(currentBatch.map(q=>q[5]))].map(cat=>(
+            <span key={cat} style={S.badge((CAT_META[cat]?.color||"#888")+"22",CAT_META[cat]?.color||"#888")}>{CAT_META[cat]?.emoji} {cat}</span>
+          ))}
+        </div>
+
+        {currentBatch.map((q,idx)=>{
+          const [rank,lcNum,title,acceptance,difficulty,category,isOA]=q;
+          const status=answered[rank];
+          const hinted=showHint[rank];
+          const problemShown=showProblem[rank];
+          const slug=title.toLowerCase().replace(/[^a-z0-9]+/g,'-').replace(/^-|-$/g,'');
+          const lcUrl=`https://leetcode.com/problems/${slug}/`;
+          const oaData=OA_PROBLEMS[title];
+          return (
+            <div key={rank} style={S.card(status)}>
+              <div style={{display:"flex",alignItems:"center",gap:"8px",marginBottom:"10px",flexWrap:"wrap"}}>
+                <span style={S.badge("#252836","#888")}>#{rank}</span>
+                {isOA ? <span style={S.badge("#FF97FF22","#FF97FF")}>🏢 Amazon OA</span>
+                      : <span style={S.badge("#636EFA22","#636EFA")}>LC {lcNum}</span>}
+                <span style={S.badge(DIFF_BG[difficulty],DIFF_COLOR[difficulty])}>{difficulty}</span>
+                <span style={S.badge((CAT_META[category]?.color||"#888")+"22",CAT_META[category]?.color||"#888")}>{CAT_META[category]?.emoji} {category}</span>
+                {status&&<span style={{marginLeft:"auto",fontSize:"1.1rem"}}>{status==="solved"?"✅":status==="unsolved"?"❌":"⏭️"}</span>}
+              </div>
+              <div style={{fontSize:"1rem",fontWeight:700,color:"#fff",marginBottom:"10px",lineHeight:1.4}}>{idx+1}. {title}</div>
+              <div style={{fontSize:"0.75rem",color:"#777",marginBottom:"12px"}}>Acceptance: {acceptance}</div>
+              <div style={{display:"flex",gap:"8px",flexWrap:"wrap",alignItems:"center"}}>
+                <button style={{...S.btn("#00b8a3",status==="solved"?"#005f4a":"#003d37","#00b8a3")}} onClick={()=>mark(rank,"solved")}>✅ Solved</button>
+                <button style={{...S.btn("#ff375f",status==="unsolved"?"#5f0015":"#3d0010","#ff375f")}} onClick={()=>mark(rank,"unsolved")}>❌ Review</button>
+                <button style={{...S.btn("#ffc01e",status==="skip"?"#5f4f00":"#3d3200","#ffc01e")}} onClick={()=>mark(rank,"skip")}>⏭️ Skip</button>
+                <button style={S.btn("#636EFA","#1e2030","#636EFA")} onClick={()=>toggleHint(rank)}>{hinted?"🙈 Hide Hint":"💡 Hint"}</button>
+                {isOA
+                  ? <button style={S.btn("#AB63FA","#1e2030","#AB63FA")} onClick={()=>toggleProblem(rank)}>{problemShown?"📕 Hide":"📖 Problem"}</button>
+                  : <a href={lcUrl} target="_blank" rel="noreferrer" style={{...S.btn("#FFA15A","#1e2030","#FFA15A"),textDecoration:"none"}}>🔗 LC</a>
+                }
+              </div>
+              {problemShown&&oaData&&<div style={S.problemBox}>
+                <div style={{fontWeight:700,color:"#AB63FA",marginBottom:"8px"}}>📖 Problem Statement</div>
+                <div style={{marginBottom:"10px"}}>{oaData.desc}</div>
+                <div style={{fontWeight:600,color:"#888",fontSize:"0.78rem",marginBottom:"4px"}}>EXAMPLE</div>
+                <pre style={{background:"#0f1117",padding:"10px",borderRadius:"8px",fontSize:"0.78rem",overflowX:"auto",whiteSpace:"pre-wrap"}}>{oaData.example}</pre>
+                <div style={{marginTop:"8px",fontSize:"0.78rem",color:"#888"}}><strong style={{color:"#AB63FA"}}>Pattern:</strong> {oaData.pattern}</div>
+              </div>}
+              {hinted&&<div style={S.hintBox}><strong style={{color:"#636EFA"}}>💡 </strong>{isOA&&oaData?oaData.hint:(HINTS[lcNum]||"Check the LeetCode editorial.")}</div>}
+            </div>
+          );
+        })}
+
+        {allBatchAnswered&&batchIdx<totalBatches-1&&(
+          <div style={{background:"#0f2a27",border:"1px solid #00b8a3",borderRadius:"12px",padding:"16px",textAlign:"center",marginTop:"8px"}}>
+            <div style={{fontSize:"1rem",fontWeight:700,color:"#00b8a3",marginBottom:"6px"}}>🎉 Batch {batchIdx+1} done!</div>
+            <div style={{fontSize:"0.83rem",color:"#aaa",marginBottom:"12px"}}>{total_done}/{TOTAL} total complete</div>
+            <button style={{...S.btn("#00b8a3","#005f4a","#00b8a3"),padding:"9px 26px"}} onClick={()=>{setBatchIdx(b=>b+1);window.scrollTo(0,0);}}>Next Batch →</button>
+          </div>
+        )}
+        {total_done===TOTAL&&(
+          <div style={{background:"linear-gradient(135deg,#0f2a27,#1a2d45)",border:"1px solid #636EFA",borderRadius:"14px",padding:"24px",textAlign:"center",marginTop:"16px"}}>
+            <div style={{fontSize:"2rem",marginBottom:"8px"}}>🏆</div>
+            <div style={{fontSize:"1.2rem",fontWeight:800,color:"#fff",marginBottom:"6px"}}>All {TOTAL} DS&A questions reviewed!</div>
+            <div style={{fontSize:"0.88rem",color:"#aaa"}}>{solved} solved · {unsolved} review · {skipped} skipped</div>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+ReactDOM.createRoot(document.getElementById("root")).render(<AmazonDSAQuiz/>);
+</script>
+</body>
+</html>

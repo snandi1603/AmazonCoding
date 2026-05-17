@@ -1,0 +1,944 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>🚀 Amazon Interview Dashboard</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/react/18.2.0/umd/react.production.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.2.0/umd/react-dom.production.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/babel-standalone/7.23.2/babel.min.js"></script>
+<style>
+* { margin:0; padding:0; box-sizing:border-box; }
+body { background:#0f1117; font-family:'Segoe UI',Arial,sans-serif; color:#e0e0e0; overflow-x:hidden; }
+::-webkit-scrollbar { width:5px; }
+::-webkit-scrollbar-track { background:#1a1d27; }
+::-webkit-scrollbar-thumb { background:#636EFA44; border-radius:3px; }
+pre { white-space:pre-wrap; word-break:break-word; font-family:'Courier New',monospace; }
+</style>
+</head>
+<body>
+<div id="root"></div>
+<script type="text/babel">
+const { useState, useEffect, useCallback } = React;
+
+// ─── STORAGE ────────────────────────────────────────────────────────────────
+const STORAGE_KEY = "amazon_dashboard_v1";
+function loadState() {
+  try { const s = localStorage.getItem(STORAGE_KEY); return s ? JSON.parse(s) : {}; }
+  catch { return {}; }
+}
+function saveState(s) {
+  try { localStorage.setItem(STORAGE_KEY, JSON.stringify(s)); } catch {}
+}
+
+// ─── DS&A QUESTIONS ─────────────────────────────────────────────────────────
+// [rank, lcNum, title, acceptance, difficulty, category, isOA]
+const DSA_QUESTIONS = [
+  [1,1,"Two Sum","57.2%","Easy","Arrays / Hashing",false],
+  [2,3,"Longest Substring Without Repeating Characters","38.7%","Medium","Sliding Window",false],
+  [3,42,"Trapping Rain Water","67.0%","Hard","Stack",false],
+  [4,146,"LRU Cache","47.0%","Medium","Design",false],
+  [5,11,"Container With Most Water","59.7%","Medium","Sliding Window",false],
+  [6,2,"Add Two Numbers","48.1%","Medium","Linked List",false],
+  [7,14,"Longest Common Prefix","47.3%","Easy","String",false],
+  [8,121,"Best Time to Buy and Sell Stock","56.5%","Easy","Dynamic Programming",false],
+  [9,5,"Longest Palindromic Substring","37.5%","Medium","Dynamic Programming",false],
+  [10,15,"3Sum","38.8%","Medium","Sliding Window",false],
+  [11,200,"Number of Islands","64.0%","Medium","Graph",false],
+  [12,875,"Koko Eating Bananas","49.8%","Medium","Binary Search",false],
+  [13,4,"Median of Two Sorted Arrays","46.1%","Hard","Binary Search",false],
+  [14,56,"Merge Intervals","51.4%","Medium","Sorting / Greedy",false],
+  [15,49,"Group Anagrams","72.3%","Medium","Arrays / Hashing",false],
+  [16,23,"Merge k Sorted Lists","59.1%","Hard","Sorting / Greedy",false],
+  [17,169,"Majority Element","66.2%","Easy","Arrays / Hashing",false],
+  [18,128,"Longest Consecutive Sequence","47.0%","Medium","Arrays / Hashing",false],
+  [19,560,"Subarray Sum Equals K","47.0%","Medium","Sorting / Greedy",false],
+  [20,9,"Palindrome Number","60.4%","Easy","Arrays / Hashing",false],
+  [21,20,"Valid Parentheses","43.9%","Easy","Stack",false],
+  [22,22,"Generate Parentheses","78.4%","Medium","Backtracking",false],
+  [24,17,"Letter Combinations of a Phone Number","65.7%","Medium","Backtracking",false],
+  [25,21,"Merge Two Sorted Lists","68.1%","Easy","Linked List",false],
+  [26,70,"Climbing Stairs","54.0%","Easy","Dynamic Programming",false],
+  [27,136,"Single Number","77.5%","Easy","Arrays / Hashing",false],
+  [28,162,"Find Peak Element","46.8%","Medium","Binary Search",false],
+  [29,994,"Rotting Oranges","58.3%","Medium","Graph",false],
+  [30,33,"Search in Rotated Sorted Array","44.3%","Medium","Binary Search",false],
+  [31,69,"Sqrt(x)","41.6%","Easy","Binary Search",false],
+  [32,904,"Fruit Into Baskets","50.7%","Medium","Sliding Window",false],
+  [33,41,"First Missing Positive","42.6%","Hard","Arrays / Hashing",false],
+  [34,53,"Maximum Subarray","53.1%","Medium","Dynamic Programming",false],
+  [35,236,"Lowest Common Ancestor of Binary Tree","68.9%","Medium","Trees",false],
+  [36,239,"Sliding Window Maximum","48.5%","Hard","Sliding Window",false],
+  [37,1929,"Concatenation of Array","90.5%","Easy","Arrays / Hashing",false],
+  [38,79,"Word Search","47.0%","Medium","Backtracking",false],
+  [40,51,"N-Queens","75.1%","Hard","Backtracking",false],
+  [41,88,"Merge Sorted Array","54.5%","Easy","Sorting / Greedy",false],
+  [43,767,"Reorganize String","56.9%","Medium","Sorting / Greedy",false],
+  [44,26,"Remove Duplicates from Sorted Array","62.5%","Easy","Arrays / Hashing",false],
+  [45,35,"Search Insert Position","50.9%","Easy","Binary Search",false],
+  [47,242,"Valid Anagram","67.9%","Easy","Arrays / Hashing",false],
+  [48,347,"Top K Frequent Elements","66.1%","Medium","Sorting / Greedy",false],
+  [49,18,"4Sum","40.2%","Medium","Sliding Window",false],
+  [50,28,"Find First Occurrence in String","46.4%","Easy","String",false],
+  [52,75,"Sort Colors","69.3%","Medium","Sorting / Greedy",false],
+  [53,78,"Subsets","82.1%","Medium","Backtracking",false],
+  [54,155,"Min Stack","57.9%","Medium","Stack",false],
+  [55,217,"Contains Duplicate","64.2%","Easy","Arrays / Hashing",false],
+  [57,31,"Next Permutation","44.9%","Medium","Sorting / Greedy",false],
+  [58,74,"Search a 2D Matrix","53.7%","Medium","Binary Search",false],
+  [60,207,"Course Schedule","51.0%","Medium","Graph",false],
+  [61,283,"Move Zeroes","63.7%","Easy","Arrays / Hashing",false],
+  [64,13,"Roman to Integer","66.4%","Easy","String",false],
+  [66,36,"Valid Sudoku","64.3%","Medium","Matrix / Grid",false],
+  [67,62,"Unique Paths","66.7%","Medium","Dynamic Programming",false],
+  [69,138,"Copy List with Random Pointer","62.6%","Medium","Linked List",false],
+  [70,143,"Reorder List","64.8%","Medium","Linked List",false],
+  [72,424,"Longest Repeating Character Replacement","59.2%","Medium","Sliding Window",false],
+  [74,6,"Zigzag Conversion","53.7%","Medium","String",false],
+  [75,19,"Remove Nth Node From End of List","51.2%","Medium","Linked List",false],
+  [76,45,"Jump Game II","42.6%","Medium","Sorting / Greedy",false],
+  [77,54,"Spiral Matrix","56.4%","Medium","Matrix / Grid",false],
+  [78,124,"Binary Tree Maximum Path Sum","42.1%","Hard","Trees",false],
+  [79,198,"House Robber","53.0%","Medium","Dynamic Programming",false],
+  [81,735,"Asteroid Collision","47.4%","Medium","Stack",false],
+  [82,1004,"Max Consecutive Ones III","67.4%","Medium","Sliding Window",false],
+  [84,34,"Find First and Last Position in Sorted Array","48.5%","Medium","Binary Search",false],
+  [86,135,"Candy","48.1%","Hard","Sorting / Greedy",false],
+  [88,209,"Minimum Size Subarray Sum","51.3%","Medium","Sliding Window",false],
+  [89,238,"Product of Array Except Self","68.7%","Medium","Arrays / Hashing",false],
+  [91,297,"Serialize and Deserialize Binary Tree","60.5%","Hard","Trees",false],
+  [92,322,"Coin Change","48.1%","Medium","Dynamic Programming",false],
+  [94,485,"Max Consecutive Ones","64.8%","Easy","Arrays / Hashing",false],
+  [95,496,"Next Greater Element I","75.9%","Easy","Stack",false],
+  [98,58,"Length of Last Word","58.5%","Easy","String",false],
+  [99,76,"Minimum Window Substring","47.1%","Hard","Sliding Window",false],
+  [100,98,"Validate Binary Search Tree","35.5%","Medium","Trees",false],
+  [103,139,"Word Break","49.2%","Medium","Dynamic Programming",false],
+  [104,151,"Reverse Words in a String","55.8%","Medium","String",false],
+  [105,199,"Binary Tree Right Side View","69.7%","Medium","Trees",false],
+  [106,215,"Kth Largest Element in an Array","68.8%","Medium","Sorting / Greedy",false],
+  [107,253,"Meeting Rooms II","52.6%","Medium","Sorting / Greedy",false],
+  [108,295,"Find Median from Data Stream","54.3%","Hard","Sorting / Greedy",false],
+  [109,503,"Next Greater Element II","68.1%","Medium","Stack",false],
+  [112,39,"Combination Sum","76.2%","Medium","Backtracking",false],
+  [113,46,"Permutations","81.7%","Medium","Backtracking",false],
+  [114,55,"Jump Game","40.6%","Medium","Sorting / Greedy",false],
+  [115,67,"Add Binary","57.8%","Easy","String",false],
+  [116,73,"Set Matrix Zeroes","62.6%","Medium","Matrix / Grid",false],
+  [117,84,"Largest Rectangle in Histogram","49.5%","Hard","Stack",false],
+  [118,122,"Best Time to Buy and Sell Stock II","70.9%","Medium","Dynamic Programming",false],
+  [119,134,"Gas Station","47.7%","Medium","Sorting / Greedy",false],
+  [121,206,"Reverse Linked List","80.4%","Easy","Linked List",false],
+  [123,543,"Diameter of Binary Tree","65.2%","Easy","Trees",false],
+  [125,621,"Task Scheduler","62.8%","Medium","Sorting / Greedy",false],
+  [127,658,"Find K Closest Elements","49.5%","Medium","Binary Search",false],
+  [128,852,"Peak Index in a Mountain Array","66.9%","Medium","Binary Search",false],
+  [129,1011,"Capacity To Ship Packages Within D Days","73.6%","Medium","Binary Search",false],
+  [130,32,"Longest Valid Parentheses","38.3%","Hard","Stack",false],
+  [134,212,"Word Search II","38.2%","Hard","Backtracking",false],
+  [136,410,"Split Array Largest Sum","60.0%","Hard","Dynamic Programming",false],
+  [139,696,"Count Binary Substrings","70.3%","Easy","String",false],
+  [140,739,"Daily Temperatures","68.5%","Medium","Stack",false],
+  [145,987,"Vertical Order Traversal of Binary Tree","53.4%","Hard","Trees",false],
+  [155,219,"Contains Duplicate II","51.0%","Easy","Arrays / Hashing",false],
+  [157,240,"Search a 2D Matrix II","57.0%","Medium","Matrix / Grid",false],
+  [158,300,"Longest Increasing Subsequence","59.2%","Medium","Dynamic Programming",false],
+  [162,567,"Permutation in String","48.6%","Medium","Sliding Window",false],
+  [163,931,"Minimum Falling Path Sum","60.8%","Medium","Dynamic Programming",false],
+  [164,981,"Time Based Key-Value Store","49.8%","Medium","Design",false],
+  [167,1423,"Maximum Points from Cards","57.4%","Medium","Sliding Window",false],
+  [171,1482,"Min Days to Make m Bouquets","56.4%","Medium","Binary Search",false],
+  [178,72,"Edit Distance","60.3%","Medium","Dynamic Programming",false],
+  [181,131,"Palindrome Partitioning","73.8%","Medium","Backtracking",false],
+  [182,133,"Clone Graph","64.9%","Medium","Graph",false],
+  [184,152,"Maximum Product Subarray","36.1%","Medium","Dynamic Programming",false],
+  [185,179,"Largest Number","42.7%","Medium","Sorting / Greedy",false],
+  [189,312,"Burst Balloons","63.1%","Hard","Dynamic Programming",false],
+  [193,547,"Number of Provinces","70.1%","Medium","Graph",false],
+  [200,863,"All Nodes Distance K in Binary Tree","67.5%","Medium","Trees",false],
+  [209,57,"Insert Interval","44.9%","Medium","Sorting / Greedy",false],
+  [210,63,"Unique Paths II","44.3%","Medium","Dynamic Programming",false],
+  [225,226,"Invert Binary Tree","79.9%","Easy","Trees",false],
+  [233,416,"Partition Equal Subset Sum","49.3%","Medium","Dynamic Programming",false],
+  [234,417,"Pacific Atlantic Water Flow","60.7%","Medium","Graph",false],
+  [235,443,"String Compression","59.7%","Medium","String",false],
+  [239,518,"Coin Change II","60.3%","Medium","Dynamic Programming",false],
+  [242,721,"Accounts Merge","61.0%","Medium","Graph",false],
+  [249,1091,"Shortest Path in Binary Matrix","51.2%","Medium","Graph",false],
+  [252,1382,"Balance a Binary Search Tree","86.3%","Medium","Trees",false],
+  [266,102,"Binary Tree Level Order Traversal","72.3%","Medium","Trees",false],
+  [268,104,"Maximum Depth of Binary Tree","78.0%","Easy","Trees",false],
+  [280,221,"Maximal Square","50.1%","Medium","Dynamic Programming",false],
+  [283,269,"Alien Dictionary","37.1%","Hard","Graph",false],
+  [291,392,"Is Subsequence","48.9%","Easy","String",false],
+  [292,394,"Decode String","62.4%","Medium","Stack",false],
+  [306,704,"Binary Search","60.6%","Easy","Binary Search",false],
+  [310,827,"Making A Large Island","56.4%","Hard","Graph",false],
+  [318,1235,"Maximum Profit in Job Scheduling","54.7%","Hard","Dynamic Programming",false],
+  [374,442,"Find All Duplicates in an Array","76.8%","Medium","Arrays / Hashing",false],
+  // Amazon OA DS&A
+  [500,null,"Min Cost To Add New Roads","—","Hard","Graph",true],
+  [501,null,"Get DNA Sequence","—","Medium","Sliding Window",true],
+  [502,null,"Get Number of Teams","—","Medium","Sorting / Greedy",true],
+  [503,null,"Distribute Parcels / Minimize Max Parcels","—","Medium","Binary Search",true],
+  [504,null,"Maximum Precipitation","—","Medium","Arrays / Hashing",true],
+  [505,null,"Get Maximum Greyness","—","Medium","Matrix / Grid",true],
+  [506,null,"Find Minimum Load Index","—","Medium","Arrays / Hashing",true],
+  [507,null,"Execute Processes","—","Medium","Sorting / Greedy",true],
+  [508,null,"Make The Array Positive","—","Medium","Arrays / Hashing",true],
+  [509,null,"Server Security Level Grouping","—","Medium","Arrays / Hashing",true],
+  [510,null,"Maximum Bandwidth Contribution","—","Medium","Sorting / Greedy",true],
+];
+
+const CLASSES_PROBLEMS = [
+  { id:"C1", title:"Team Ranking System", difficulty:"Medium", focus:"HashMap + cached best pointer", source:"Amazon OA" },
+  { id:"C2", title:"Optimal Task Scheduling", difficulty:"Medium", focus:"Scheduler class + priority queue", source:"Amazon OA" },
+  { id:"C3", title:"Deliver Zones", difficulty:"Medium", focus:"Zone partitioning class", source:"Amazon OA" },
+  { id:"C4", title:"Warehouse Distribution", difficulty:"Medium", focus:"Warehouse model + binary search", source:"Amazon OA" },
+  { id:"C5", title:"Server Instance Allocation & Cost", difficulty:"Medium", focus:"Server pool + heap selection", source:"Amazon OA" },
+  { id:"C6", title:"Server Security Level Grouping", difficulty:"Medium", focus:"Group/Level model + splitter", source:"Amazon OA" },
+  { id:"C7", title:"Calculate Final Prices (Discount Engine)", difficulty:"Medium", focus:"Pricing engine + rule pipeline", source:"Amazon OA" },
+  { id:"C8", title:"LRU Cache with Usage Analytics", difficulty:"Medium", focus:"CacheStore + AccessTracker separation", source:"Extended LC 146" },
+  { id:"C9", title:"Event-Driven Order Management", difficulty:"Medium", focus:"Command pattern + state machine", source:"Amazon OA Pattern" },
+  { id:"C10", title:"Inventory Management with Reorder", difficulty:"Medium", focus:"Inventory class + reorder policy", source:"Amazon OA Pattern" },
+];
+
+const LOGICAL_PROBLEMS = [
+  { id:"L1", title:"Check Similar Passwords", difficulty:"Medium", focus:"Rule decomposition — each rule as own helper", source:"Amazon OA" },
+  { id:"L2", title:"Process Queries on Cart", difficulty:"Medium", focus:"Command-pattern dispatcher", source:"Amazon OA" },
+  { id:"L3", title:"Checksum Logic Validator", difficulty:"Hard", focus:"Multi-step formula with precise ordering", source:"Amazon OA" },
+  { id:"L4", title:"Count Distinct Passwords", difficulty:"Medium", focus:"Combinatorics with clean case handling", source:"Amazon OA" },
+  { id:"L5", title:"Customer Package Weight Report (SQL)", difficulty:"Medium", focus:"GROUP BY + conditional SUM", source:"Amazon OA" },
+  { id:"L6", title:"Rate Limiter with Clean State", difficulty:"Medium", focus:"Guard clauses + single-responsibility", source:"Amazon OA Pattern" },
+  { id:"L7", title:"Flight Itinerary Validator", difficulty:"Medium", focus:"Rule decomposition + clear error reporting", source:"Amazon OA Pattern" },
+  { id:"L8", title:"Metrics Aggregator", difficulty:"Medium", focus:"Separation of concerns — 3 classes", source:"Amazon OA Pattern" },
+];
+
+// ─── 9-DAY PLAN ─────────────────────────────────────────────────────────────
+// Each day specifies which question IDs to show
+const STUDY_PLAN = [
+  { day:1, date:"Sat Apr 19", theme:"Foundation", color:"#636EFA",
+    dsa: DSA_QUESTIONS.slice(0,10).map(q=>q[0]),
+    classes: ["C1","C2"], logical: ["L1","L2"] },
+  { day:2, date:"Sun Apr 20", theme:"Graphs + Design", color:"#FF6692",
+    dsa: DSA_QUESTIONS.slice(10,20).map(q=>q[0]),
+    classes: ["C3","C4"], logical: ["L3","L4"] },
+  { day:3, date:"Mon Apr 21", theme:"Trees + OA DS&A", color:"#19D3F3",
+    dsa: [...DSA_QUESTIONS.slice(20,28).map(q=>q[0]), 500, 501],
+    classes: ["C5","C6"], logical: ["L5","L6"] },
+  { day:4, date:"Tue Apr 22", theme:"Dynamic Programming", color:"#EF553B",
+    dsa: [...DSA_QUESTIONS.slice(28,36).map(q=>q[0]), 502, 503],
+    classes: ["C7","C8"], logical: ["L7","L8"] },
+  { day:5, date:"Wed Apr 23", theme:"Stack + OA Problems", color:"#B6E880",
+    dsa: [...DSA_QUESTIONS.slice(36,42).map(q=>q[0]), 504, 505, 506, 507],
+    classes: ["C9","C10"], logical: [] },
+  { day:6, date:"Thu Apr 24", theme:"Mixed + Remaining OA", color:"#AB63FA",
+    dsa: [...DSA_QUESTIONS.slice(42,50).map(q=>q[0]), 508, 509, 510],
+    classes: [], logical: [] },
+  { day:7, date:"Fri Apr 25", theme:"Speed + Timed Practice", color:"#FECB52",
+    dsa: DSA_QUESTIONS.slice(50,60).map(q=>q[0]),
+    classes: [], logical: [] },
+  { day:8, date:"Sat Apr 26", theme:"Final Gaps", color:"#FFA15A",
+    dsa: DSA_QUESTIONS.slice(60,68).map(q=>q[0]),
+    classes: [], logical: [] },
+  { day:9, date:"Sun Apr 27", theme:"Light Review + Rest", color:"#00CC96",
+    dsa: DSA_QUESTIONS.slice(68,71).map(q=>q[0]),
+    classes: [], logical: [] },
+];
+
+const DIFF_COLOR = { Easy:"#00b8a3", Medium:"#ffc01e", Hard:"#ff375f" };
+const DIFF_BG    = { Easy:"#003d37", Medium:"#3d2f00", Hard:"#3d0010" };
+
+const CAT_COLORS = {
+  "Arrays / Hashing":"#636EFA","Dynamic Programming":"#EF553B",
+  "Sliding Window":"#AB63FA","Stack":"#B6E880","Sorting / Greedy":"#FECB52",
+  "Binary Search":"#00CC96","Trees":"#19D3F3","Graph":"#FF6692",
+  "String":"#72B7B2","Linked List":"#FFA15A","Backtracking":"#FF97FF",
+  "Matrix / Grid":"#E45756","Design":"#54A24B",
+};
+
+const DSA_HINTS = {
+  1:"Hash map: store target-num as you iterate.",3:"Sliding window + set.",
+  42:"Monotonic stack: pop when current taller.",146:"HashMap + doubly-linked list.",
+  11:"BFS/DFS from each unvisited '1'.",875:"Binary search on eating speed.",
+  4:"Binary search on smaller array, partition.",56:"Sort by start, merge overlaps.",
+  49:"Sort chars of each word as key.",23:"Min-heap of (val, node).",
+  169:"Boyer-Moore Voting.",128:"Set + count streaks from stream starts.",
+  560:"Prefix sum + HashMap.",9:"Reverse second half of digits.",
+  200:"BFS/DFS mark all connected land.",15:"Sort, fix one, two-pointer rest.",
+  20:"Stack: push opens, pop+match closes.",22:"Backtrack: ( if open<n, ) if close<open.",
+  5:"Expand around center for each char/pair.",121:"Track min price, update max profit.",
+  70:"dp[i]=dp[i-1]+dp[i-2].",875:"Binary search on speed [1,max(piles)].",
+  875:"Binary search.",875:"BS.",
+  33:"Binary search: find sorted half.",162:"BS: if mid>mid+1 go left.",
+  994:"Multi-source BFS from rotten oranges.",69:"BS for floor(sqrt(x)).",
+  904:"Sliding window ≤2 fruit types.",41:"Index marking: negate at abs(num)-1.",
+  53:"Kadane's: running max sum.",236:"LCA: return if root==p or q.",
+  239:"Monotonic deque of indices.",1929:"return nums+nums.",
+  79:"DFS+backtrack, mark '#'.",51:"Backtrack row by row, sets for col/diag.",
+  88:"Merge from end.",767:"Max-heap by freq.",26:"Two pointers slow/fast.",
+  35:"Standard BS, return lo.",242:"Sort or count chars.",347:"Bucket sort by freq.",
+  18:"Sort, fix 2, two-pointer inner 2.",28:"KMP or built-in.",
+  75:"Dutch National Flag 3-way.",78:"Bitmask 2^n or backtrack.",155:"Min-stack aux.",
+  217:"Set, size<len→dup.",31:"Find rightmost asc pair, swap, reverse suffix.",
+  74:"BS treat as 1D.",207:"Topological sort.",283:"Two pointers fill non-zeros.",
+  13:"Map values, subtract 2*prev if cur>prev.",36:"Sets row/col/box.",
+  62:"dp[i][j]=dp[i-1][j]+dp[i][j-1].",138:"Two passes: create then wire.",
+  143:"Find mid, reverse half, merge.",424:"Window valid when len-maxFreq≤k.",
+  6:"Row index zigzag.",19:"Fast n+1 ahead.",45:"Greedy: track reach.",
+  54:"Direction array, shrink bounds.",124:"DFS: gain=max(0,L)+max(0,R)+val.",
+  198:"dp[i]=max(dp[i-2]+nums[i],dp[i-1]).",735:"Stack: neg destroys pos top.",
+  1004:"Sliding window, zeros≤k.",34:"Two BS: leftmost and rightmost.",
+  135:"Two passes L→R then R→L.",209:"Sliding window shrink while sum≥target.",
+  238:"Left pass then right pass products.",297:"BFS/DFS serialize with '#'.",
+  322:"dp[i]=min(dp[i-coin]+1).",485:"Single pass count ones.",
+  496:"Monotonic stack + HashMap.",58:"Trim right, scan left for space.",
+  76:"Sliding window char count.",98:"DFS with min/max bounds.",
+  139:"dp[i]=true if dp[j] true and word in dict.",151:"Split, filter, reverse, join.",
+  199:"BFS level order, last per level.",215:"QuickSelect or min-heap size k.",
+  253:"Sort, min-heap of end times.",295:"Two heaps: max lower, min upper.",
+  503:"Monotonic stack, iterate 2n mod.",39:"Backtrack with reuse, prune.",
+  46:"Backtrack: swap with each following.",55:"Greedy: track max reach.",
+  67:"Binary addition right-to-left.",73:"Record zero rows/cols.",
+  84:"Monotonic stack for area.",122:"Greedy: capture every uptick.",
+  134:"Greedy: track start station.",206:"prev→curr→next pointer dance.",
+  543:"DFS: diameter=max(L+R).",621:"max(n,(maxFreq-1)*(k+1)+count).",
+  658:"BS left boundary, take k.",852:"BS: mid<mid+1 go right.",
+  1011:"BS capacity, greedy check.",32:"Stack of indices, -1 base.",
+  212:"Trie+DFS on board.",410:"BS on max sum.",739:"Monotonic stack indices.",
+  300:"dp[i]=1+max(dp[j]) where nums[j]<nums[i].",981:"HashMap→sorted ts→BS.",
+  1423:"Total sum - min window n-k.",1482:"BS on days.",72:"dp edit distance.",
+  131:"Backtrack check palindrome.",133:"BFS/DFS clone map.",
+  152:"Track max and min product.",179:"Comparator: a+b vs b+a.",
+  312:"dp[i][j]=max coins between i,j.",547:"Union-Find or DFS.",
+  57:"BS insert, merge neighbors.",63:"dp skip obstacles.",
+  416:"0/1 knapsack.",417:"BFS from both borders.",
+  518:"Unbounded knapsack.",721:"Union-Find by email.",
+  1091:"BFS from (0,0).",1382:"Inorder to array, build balanced.",
+  226:"Swap children recursively.",210:"Kahn's topological sort.",
+  235:"BST: both<root→left, both>root→right.",
+  392:"Two pointers advance on match.",394:"Stack: push on '[', pop on ']'.",
+  704:"lo=0,hi=n-1,mid=(lo+hi)/2.",827:"Union-Find, check water neighbors.",
+  1235:"dp+BS by end time.",442:"Negate at abs(num)-1 to mark.",
+  269:"Topo sort from char diffs.",280:"dp[i][j]=min(up,left,diag)+1.",
+  102:"BFS level by level.",104:"1+max(left,right).",
+};
+
+const OA_PROBLEMS = {
+  500:{desc:"Given n cities, existing roads, and candidate new roads with costs, return min total cost to connect all cities. Return -1 if impossible.",hint:"Union-Find to collapse existing components, then Kruskal's MST on candidates. O(E log E)."},
+  501:{desc:"Given DNA string s and integer k, return all length-k substrings appearing more than once.",hint:"Sliding window of size k + two HashSets: seen and repeated."},
+  502:{desc:"Given scores array and threshold T, count pairs (i,j) i<j where scores[i]+scores[j]≥T.",hint:"Sort + two pointers. When sum≥T: count+=(hi-lo), hi--. Else lo++."},
+  503:{desc:"Assign packages (in order) to k trucks to minimize the maximum load on any truck.",hint:"Binary search on capacity. Greedy feasibility check. Same as LC 1011."},
+  504:{desc:"Given daily rain readings and window w, return max total precipitation over any w-day window.",hint:"Sliding window or prefix sums. max(prefix[i+w]-prefix[i])."},
+  505:{desc:"Given m×n grid of 0s/1s, find submatrix with maximum number of 1s.",hint:"2D prefix sums. For each row pair, reduce to 1D max subarray (Kadane's)."},
+  506:{desc:"Given server loads updated in real time, after each update return index of server with minimum load.",hint:"Maintain loads array. Linear scan O(n) or sorted structure for O(log n)."},
+  507:{desc:"Given processes with arrival/burst/priority, simulate priority-based scheduler. Return completion order.",hint:"Min-heap keyed on (priority, arrival, id). At each tick, add arrived processes, pop highest priority."},
+  508:{desc:"Given integer array, return minimum increments so every subarray of length>1 has non-negative sum.",hint:"Greedy: running prefix sum. When sum<0: increments+=abs(sum), reset sum=0. O(n)."},
+  509:{desc:"Split n servers into k near-equal groups to minimize total variance (max_level-min_level) per group.",hint:"Sort by security level. Contiguous grouping is optimal. First (n%k) groups get ceil(n/k) servers."},
+  510:{desc:"Given n server bandwidths and k cables, pair servers to maximize total bandwidth of k pairs.",hint:"Sort descending. Sum first 2k elements (adjacent pairs). Greedy is optimal."},
+};
+
+// ─── MAIN APP ────────────────────────────────────────────────────────────────
+function App() {
+  const [answered, setAnswered] = useState(() => loadState());
+  const [view, setView] = useState("plan");       // "plan" | "dsa" | "classes" | "logical"
+  const [activeBatch, setActiveBatch] = useState(0);
+  const [activeDay, setActiveDay] = useState(1);
+  const [expandedHints, setExpandedHints] = useState({});
+  const [expandedProblems, setExpandedProblems] = useState({});
+  const [expandedDayDetail, setExpandedDayDetail] = useState({});
+  const [sidebarOpen, setSidebarOpen] = useState(true);
+
+  useEffect(() => { saveState(answered); }, [answered]);
+
+  const mark = useCallback((id, status) => {
+    setAnswered(prev => {
+      const next = { ...prev, [id]: status };
+      saveState(next);
+      return next;
+    });
+  }, []);
+
+  const toggleHint    = id => setExpandedHints(p => ({...p, [id]:!p[id]}));
+  const toggleProblem = id => setExpandedProblems(p => ({...p, [id]:!p[id]}));
+  const toggleDayDetail = d => setExpandedDayDetail(p => ({...p, [d]:!p[d]}));
+
+  // ── Stats ──────────────────────────────────────────────────────────────────
+  const dsaTotal    = DSA_QUESTIONS.length;
+  const classTotal  = CLASSES_PROBLEMS.length;
+  const logicTotal  = LOGICAL_PROBLEMS.length;
+  const grandTotal  = dsaTotal + classTotal + logicTotal;
+
+  const countStatus = (ids, status) => ids.filter(id => answered[id] === status).length;
+  const dsaDone     = DSA_QUESTIONS.filter(q => answered[q[0]]).length;
+  const classDone   = CLASSES_PROBLEMS.filter(p => answered[p.id]).length;
+  const logicDone   = LOGICAL_PROBLEMS.filter(p => answered[p.id]).length;
+  const grandDone   = dsaDone + classDone + logicDone;
+  const pct = n => Math.round((n[0]/n[1])*100)||0;
+
+  const dayProgress = (day) => {
+    const d = STUDY_PLAN[day-1];
+    const ids = [...d.dsa, ...d.classes, ...d.logical];
+    const done = ids.filter(id => answered[id]).length;
+    return { done, total: ids.length };
+  };
+
+  // ── Navigate to a specific day's questions ─────────────────────────────────
+  const goToDay = (day) => {
+    setActiveDay(day);
+    setActiveBatch(0);
+    setView("dsa");
+  };
+
+  const goToTrack = (track, day) => {
+    setActiveDay(day);
+    setActiveBatch(0);
+    setView(track);
+  };
+
+  // ── DSA Batch ─────────────────────────────────────────────────────────────
+  const PER_BATCH = 5;
+  const getDSAForDay = (day) => {
+    const dayData = STUDY_PLAN[day-1];
+    return DSA_QUESTIONS.filter(q => dayData.dsa.includes(q[0])).sort((a,b)=>a[0]-b[0]);
+  };
+  const getClassesForDay = (day) => {
+    const dayData = STUDY_PLAN[day-1];
+    return CLASSES_PROBLEMS.filter(p => dayData.classes.includes(p.id));
+  };
+  const getLogicalForDay = (day) => {
+    const dayData = STUDY_PLAN[day-1];
+    return LOGICAL_PROBLEMS.filter(p => dayData.logical.includes(p.id));
+  };
+
+  const currentDSA = getDSAForDay(activeDay);
+  const currentClasses = getClassesForDay(activeDay);
+  const currentLogical = getLogicalForDay(activeDay);
+  const dsaBatch = currentDSA.slice(activeBatch*PER_BATCH, (activeBatch+1)*PER_BATCH);
+  const totalBatches = Math.ceil(currentDSA.length / PER_BATCH);
+
+  // ── Styles ────────────────────────────────────────────────────────────────
+  const S = {
+    layout: { display:"flex", minHeight:"100vh" },
+    sidebar: {
+      width: sidebarOpen ? "260px" : "52px",
+      background:"#13151f",
+      borderRight:"1px solid #1e2235",
+      flexShrink:0,
+      transition:"width 0.25s",
+      overflow:"hidden",
+      display:"flex",
+      flexDirection:"column",
+    },
+    main: { flex:1, overflow:"auto", minWidth:0 },
+    topbar: {
+      background:"#1a1d27",
+      borderBottom:"1px solid #1e2235",
+      padding:"12px 20px",
+      display:"flex",
+      alignItems:"center",
+      gap:"12px",
+      flexWrap:"wrap",
+      position:"sticky",
+      top:0,
+      zIndex:50,
+    },
+    card: s => ({
+      background: s==="solved"?"#0d2218":s==="unsolved"?"#220d12":s==="skip"?"#221c08":"#1a1d27",
+      borderRadius:"12px", padding:"16px", marginBottom:"10px",
+      border:`1px solid ${s==="solved"?"#00b8a330":s==="unsolved"?"#ff375f30":s==="skip"?"#ffc01e30":"#1e2235"}`,
+    }),
+    badge: (bg,c) => ({ background:bg, color:c, padding:"2px 8px", borderRadius:"5px", fontSize:"0.71rem", fontWeight:600, display:"inline-block" }),
+    btn: (border,bg,c) => ({ padding:"6px 12px", borderRadius:"7px", border:`1px solid ${border}`, background:bg, color:c, cursor:"pointer", fontSize:"0.78rem", fontWeight:600 }),
+    pbar: (pct,color) => ({
+      width:"100%", background:"#252836", borderRadius:"6px", height:"5px", overflow:"hidden",
+    }),
+  };
+
+  // ── Sidebar ───────────────────────────────────────────────────────────────
+  const Sidebar = () => (
+    <div style={S.sidebar}>
+      {/* Toggle */}
+      <div style={{padding:"14px 12px",display:"flex",alignItems:"center",gap:"10px",borderBottom:"1px solid #1e2235",cursor:"pointer",flexShrink:0}} onClick={()=>setSidebarOpen(o=>!o)}>
+        <span style={{fontSize:"1.1rem"}}>🚀</span>
+        {sidebarOpen && <span style={{fontWeight:700,color:"#fff",fontSize:"0.9rem",whiteSpace:"nowrap"}}>Amazon Prep</span>}
+        <span style={{marginLeft:"auto",color:"#555",fontSize:"0.8rem"}}>{sidebarOpen?"◀":"▶"}</span>
+      </div>
+
+      {/* Overall progress */}
+      {sidebarOpen && (
+        <div style={{padding:"12px 14px",borderBottom:"1px solid #1e2235",flexShrink:0}}>
+          <div style={{fontSize:"0.72rem",color:"#888",marginBottom:"6px",fontWeight:600}}>OVERALL PROGRESS</div>
+          <div style={{display:"flex",justifyContent:"space-between",fontSize:"0.78rem",color:"#ccc",marginBottom:"4px"}}>
+            <span>Total</span><span style={{fontWeight:700,color:"#fff"}}>{grandDone}/{grandTotal}</span>
+          </div>
+          <div style={{background:"#252836",borderRadius:"6px",height:"6px",overflow:"hidden",marginBottom:"8px"}}>
+            <div style={{height:"100%",width:`${pct([grandDone,grandTotal])}%`,background:"linear-gradient(90deg,#636EFA,#EF553B)",borderRadius:"6px",transition:"width 0.4s"}}/>
+          </div>
+          {[["🚀","DS&A",dsaDone,dsaTotal,"#636EFA"],["⚙️","Classes",classDone,classTotal,"#54A24B"],["🧹","L&M",logicDone,logicTotal,"#FF6692"]].map(([e,l,d,t,c])=>(
+            <div key={l} style={{display:"flex",alignItems:"center",gap:"6px",marginBottom:"5px"}}>
+              <span style={{fontSize:"0.75rem"}}>{e}</span>
+              <span style={{fontSize:"0.72rem",color:"#888",width:"50px"}}>{l}</span>
+              <div style={{flex:1,background:"#252836",borderRadius:"4px",height:"4px",overflow:"hidden"}}>
+                <div style={{height:"100%",width:`${pct([d,t])}%`,background:c,borderRadius:"4px",transition:"width 0.4s"}}/>
+              </div>
+              <span style={{fontSize:"0.7rem",color:c,fontWeight:600,minWidth:"30px",textAlign:"right"}}>{pct([d,t])}%</span>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {/* Nav buttons */}
+      {sidebarOpen && (
+        <div style={{padding:"10px 10px",borderBottom:"1px solid #1e2235",flexShrink:0}}>
+          {[["📅","Plan","plan"],["🚀","DS&A Quiz","dsa"],["⚙️","Classes Quiz","classes"],["🧹","L&M Quiz","logical"]].map(([e,l,v])=>(
+            <button key={v} onClick={()=>setView(v)} style={{width:"100%",marginBottom:"4px",padding:"8px 10px",borderRadius:"8px",border:"none",cursor:"pointer",textAlign:"left",fontWeight:600,fontSize:"0.82rem",background:view===v?"#252836":"transparent",color:view===v?"#fff":"#888",display:"flex",alignItems:"center",gap:"8px"}}>
+              <span>{e}</span><span>{l}</span>
+            </button>
+          ))}
+        </div>
+      )}
+
+      {/* Day list */}
+      <div style={{flex:1,overflowY:"auto",padding:"8px 6px"}}>
+        {STUDY_PLAN.map(d => {
+          const dp = dayProgress(d.day);
+          const dpPct = dp.total > 0 ? Math.round((dp.done/dp.total)*100) : 0;
+          const isDone = dp.done === dp.total && dp.total > 0;
+          return (
+            <div
+              key={d.day}
+              onClick={() => { setActiveDay(d.day); setActiveBatch(0); setView("dsa"); }}
+              style={{padding:sidebarOpen?"8px 10px":"8px 6px",borderRadius:"8px",marginBottom:"3px",cursor:"pointer",background:activeDay===d.day&&view!=="plan"?"#252836":"transparent",display:"flex",alignItems:"center",gap:sidebarOpen?"8px":"0",transition:"background 0.15s"}}
+            >
+              <div style={{width:"24px",height:"24px",borderRadius:"6px",background:isDone?d.color+"33":"#252836",border:`1px solid ${isDone?d.color:"#2a2d3a"}`,display:"flex",alignItems:"center",justifyContent:"center",fontSize:"0.7rem",fontWeight:700,color:isDone?d.color:"#888",flexShrink:0}}>
+                {isDone?"✓":d.day}
+              </div>
+              {sidebarOpen && <>
+                <div style={{flex:1,minWidth:0}}>
+                  <div style={{fontSize:"0.75rem",fontWeight:600,color:activeDay===d.day&&view!=="plan"?"#fff":"#aaa",whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}>{d.date.split(" ").slice(1).join(" ")}</div>
+                  <div style={{background:"#1e2235",borderRadius:"3px",height:"3px",overflow:"hidden",marginTop:"4px"}}>
+                    <div style={{height:"100%",width:`${dpPct}%`,background:d.color,borderRadius:"3px",transition:"width 0.4s"}}/>
+                  </div>
+                </div>
+                <span style={{fontSize:"0.65rem",color:"#666",flexShrink:0}}>{dp.done}/{dp.total}</span>
+              </>}
+            </div>
+          );
+        })}
+      </div>
+
+      {/* Interview countdown */}
+      {sidebarOpen && (
+        <div style={{padding:"12px 14px",borderTop:"1px solid #1e2235",flexShrink:0}}>
+          <div style={{background:"#1e2235",borderRadius:"8px",padding:"10px",textAlign:"center"}}>
+            <div style={{fontSize:"0.7rem",color:"#888",marginBottom:"2px"}}>INTERVIEW</div>
+            <div style={{fontSize:"0.85rem",fontWeight:700,color:"#FECB52"}}>Mon Apr 28</div>
+            <div style={{fontSize:"0.68rem",color:"#555",marginTop:"2px"}}>You've got this 💪</div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+
+  // ── PLAN VIEW ─────────────────────────────────────────────────────────────
+  const PlanView = () => (
+    <div style={{padding:"20px"}}>
+      <div style={{marginBottom:"20px"}}>
+        <div style={{fontSize:"1.2rem",fontWeight:700,color:"#fff",marginBottom:"4px"}}>📅 9-Day Study Plan</div>
+        <div style={{fontSize:"0.83rem",color:"#888"}}>Apr 19–27 · 4 hrs/day · Interview Apr 28 · Click a day to jump to questions</div>
+      </div>
+
+      {/* Summary stats */}
+      <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(130px,1fr))",gap:"10px",marginBottom:"20px"}}>
+        {[["🚀","DS&A",dsaDone,dsaTotal,"#636EFA"],["⚙️","Classes",classDone,classTotal,"#54A24B"],["🧹","L&M",logicDone,logicTotal,"#FF6692"],["📊","Total",grandDone,grandTotal,"#FECB52"]].map(([e,l,d,t,c])=>(
+          <div key={l} style={{background:"#1a1d27",borderRadius:"10px",padding:"14px",border:`1px solid ${c}22`,textAlign:"center"}}>
+            <div style={{fontSize:"1.4rem",fontWeight:800,color:c}}>{d}<span style={{fontSize:"0.9rem",color:"#555"}}>/{t}</span></div>
+            <div style={{fontSize:"0.73rem",color:"#888",marginTop:"2px"}}>{e} {l}</div>
+            <div style={{background:"#252836",borderRadius:"4px",height:"4px",overflow:"hidden",marginTop:"6px"}}>
+              <div style={{height:"100%",width:`${pct([d,t])}%`,background:c,borderRadius:"4px"}}/>
+            </div>
+          </div>
+        ))}
+      </div>
+
+      {/* Day cards */}
+      {STUDY_PLAN.map(d => {
+        const dp = dayProgress(d.day);
+        const dpPct = dp.total > 0 ? Math.round((dp.done/dp.total)*100) : 0;
+        const isDone = dp.done === dp.total && dp.total > 0;
+        const isExpanded = expandedDayDetail[d.day];
+        const dsaForDay = getDSAForDay(d.day);
+        const classesForDay = getClassesForDay(d.day);
+        const logicalForDay = getLogicalForDay(d.day);
+
+        return (
+          <div key={d.day} style={{background:"#1a1d27",borderRadius:"12px",marginBottom:"10px",border:`1px solid ${isDone?d.color+"44":"#1e2235"}`,overflow:"hidden"}}>
+            {/* Day header — always visible */}
+            <div style={{padding:"14px 16px",display:"flex",alignItems:"center",gap:"12px",flexWrap:"wrap",cursor:"pointer"}} onClick={()=>toggleDayDetail(d.day)}>
+              <div style={{width:"36px",height:"36px",borderRadius:"8px",background:isDone?d.color+"22":"#252836",border:`2px solid ${isDone?d.color:"#2a2d3a"}`,display:"flex",alignItems:"center",justifyContent:"center",fontSize:"0.8rem",fontWeight:700,color:isDone?d.color:"#888",flexShrink:0}}>
+                {isDone?"✓":d.day}
+              </div>
+              <div style={{flex:1,minWidth:"160px"}}>
+                <div style={{display:"flex",alignItems:"center",gap:"8px",marginBottom:"4px"}}>
+                  <span style={{fontWeight:700,color:"#fff",fontSize:"0.9rem"}}>{d.date}</span>
+                  <span style={{fontWeight:600,color:d.color,fontSize:"0.82rem"}}>— {d.theme}</span>
+                </div>
+                <div style={{background:"#252836",borderRadius:"4px",height:"5px",overflow:"hidden"}}>
+                  <div style={{height:"100%",width:`${dpPct}%`,background:d.color,borderRadius:"4px",transition:"width 0.4s"}}/>
+                </div>
+              </div>
+              <div style={{display:"flex",gap:"6px",alignItems:"center",flexWrap:"wrap"}}>
+                <span style={{fontSize:"0.73rem",color:"#888"}}>{dp.done}/{dp.total} done</span>
+                {d.dsa.length>0 && <span style={{...S.badge("#636EFA22","#636EFA")}}>🚀 {d.dsa.length} DS&A</span>}
+                {d.classes.length>0 && <span style={{...S.badge("#54A24B22","#54A24B")}}>⚙️ {d.classes.length}</span>}
+                {d.logical.length>0 && <span style={{...S.badge("#FF669222","#FF6692")}}>🧹 {d.logical.length}</span>}
+                <span style={{color:"#555",fontSize:"0.8rem"}}>{isExpanded?"▲":"▼"}</span>
+              </div>
+            </div>
+
+            {/* Expanded question list */}
+            {isExpanded && (
+              <div style={{borderTop:"1px solid #1e2235",padding:"14px 16px"}}>
+                {/* DS&A questions for this day */}
+                {dsaForDay.length > 0 && (
+                  <div style={{marginBottom:"14px"}}>
+                    <div style={{fontSize:"0.78rem",fontWeight:700,color:"#636EFA",marginBottom:"8px",display:"flex",alignItems:"center",gap:"8px"}}>
+                      🚀 DS&A Questions
+                      <button onClick={()=>goToDay(d.day)} style={{...S.btn("#636EFA","#636EFA22","#636EFA"),padding:"3px 10px",fontSize:"0.7rem"}}>Open Quiz →</button>
+                    </div>
+                    <div style={{display:"flex",flexWrap:"wrap",gap:"6px"}}>
+                      {dsaForDay.map(q => {
+                        const st = answered[q[0]];
+                        return (
+                          <div key={q[0]} title={q[2]} style={{background:st==="solved"?"#0d2218":st==="unsolved"?"#220d12":st==="skip"?"#221c08":"#252836",border:`1px solid ${st==="solved"?"#00b8a350":st==="unsolved"?"#ff375f50":st==="skip"?"#ffc01e50":"#2a2d3a"}`,borderRadius:"6px",padding:"5px 8px",fontSize:"0.72rem",cursor:"pointer",display:"flex",alignItems:"center",gap:"4px"}} onClick={()=>goToDay(d.day)}>
+                            <span style={{color:q[6]?"#FF97FF":"#636EFA",fontWeight:700}}>{q[6]?"OA":q[1]}</span>
+                            <span style={{color:st==="solved"?"#00b8a3":st==="unsolved"?"#ff375f":st==="skip"?"#ffc01e":"#888",maxWidth:"100px",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{q[2].split(" ").slice(0,3).join(" ")}</span>
+                            {st && <span>{st==="solved"?"✅":st==="unsolved"?"❌":"⏭️"}</span>}
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+                )}
+                {/* Classes */}
+                {classesForDay.length > 0 && (
+                  <div style={{marginBottom:"14px"}}>
+                    <div style={{fontSize:"0.78rem",fontWeight:700,color:"#54A24B",marginBottom:"8px",display:"flex",alignItems:"center",gap:"8px"}}>
+                      ⚙️ Classes &amp; Modularization
+                      <button onClick={()=>goToTrack("classes",d.day)} style={{...S.btn("#54A24B","#54A24B22","#54A24B"),padding:"3px 10px",fontSize:"0.7rem"}}>Open Quiz →</button>
+                    </div>
+                    <div style={{display:"flex",flexWrap:"wrap",gap:"6px"}}>
+                      {classesForDay.map(p => {
+                        const st = answered[p.id];
+                        return (
+                          <div key={p.id} title={p.title} style={{background:st==="solved"?"#0d2218":st==="unsolved"?"#220d12":st==="skip"?"#221c08":"#252836",border:`1px solid ${st==="solved"?"#00b8a350":st==="unsolved"?"#ff375f50":st==="skip"?"#ffc01e50":"#2a2d3a"}`,borderRadius:"6px",padding:"5px 8px",fontSize:"0.72rem",cursor:"pointer",display:"flex",alignItems:"center",gap:"4px"}} onClick={()=>goToTrack("classes",d.day)}>
+                            <span style={{color:"#54A24B",fontWeight:700}}>{p.id}</span>
+                            <span style={{color:"#ccc",maxWidth:"110px",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{p.title}</span>
+                            {st && <span>{st==="solved"?"✅":st==="unsolved"?"❌":"⏭️"}</span>}
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+                )}
+                {/* Logical */}
+                {logicalForDay.length > 0 && (
+                  <div>
+                    <div style={{fontSize:"0.78rem",fontWeight:700,color:"#FF6692",marginBottom:"8px",display:"flex",alignItems:"center",gap:"8px"}}>
+                      🧹 Logical &amp; Maintainable
+                      <button onClick={()=>goToTrack("logical",d.day)} style={{...S.btn("#FF6692","#FF669222","#FF6692"),padding:"3px 10px",fontSize:"0.7rem"}}>Open Quiz →</button>
+                    </div>
+                    <div style={{display:"flex",flexWrap:"wrap",gap:"6px"}}>
+                      {logicalForDay.map(p => {
+                        const st = answered[p.id];
+                        return (
+                          <div key={p.id} title={p.title} style={{background:st==="solved"?"#0d2218":st==="unsolved"?"#220d12":st==="skip"?"#221c08":"#252836",border:`1px solid ${st==="solved"?"#00b8a350":st==="unsolved"?"#ff375f50":st==="skip"?"#ffc01e50":"#2a2d3a"}`,borderRadius:"6px",padding:"5px 8px",fontSize:"0.72rem",cursor:"pointer",display:"flex",alignItems:"center",gap:"4px"}} onClick={()=>goToTrack("logical",d.day)}>
+                            <span style={{color:"#FF6692",fontWeight:700}}>{p.id}</span>
+                            <span style={{color:"#ccc",maxWidth:"110px",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{p.title}</span>
+                            {st && <span>{st==="solved"?"✅":st==="unsolved"?"❌":"⏭️"}</span>}
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
+        );
+      })}
+
+      {/* Interview day */}
+      <div style={{background:"linear-gradient(135deg,#1a0f20,#1a2040)",border:"2px solid #636EFA",borderRadius:"14px",padding:"20px",textAlign:"center",marginTop:"6px"}}>
+        <div style={{fontSize:"1.6rem",marginBottom:"6px"}}>🎯</div>
+        <div style={{fontSize:"1.1rem",fontWeight:800,color:"#fff",marginBottom:"6px"}}>Interview — Mon Apr 28</div>
+        <div style={{fontSize:"0.82rem",color:"#aaa",lineHeight:1.8}}>
+          State approach + complexity BEFORE coding · Meaningful names · Guard clauses first · Complexity comment at end<br/>
+          <strong style={{color:"#636EFA"}}>Passing tests ≠ passing bar. Code quality is scored separately.</strong>
+        </div>
+      </div>
+    </div>
+  );
+
+  // ── DSA QUIZ VIEW ─────────────────────────────────────────────────────────
+  const DSAView = () => {
+    const dayData = STUDY_PLAN[activeDay-1];
+    return (
+      <div style={{padding:"16px 20px"}}>
+        <div style={{display:"flex",alignItems:"center",gap:"10px",marginBottom:"16px",flexWrap:"wrap"}}>
+          <div>
+            <div style={{fontSize:"1rem",fontWeight:700,color:"#fff"}}>🚀 DS&A — Day {activeDay}: {dayData.theme}</div>
+            <div style={{fontSize:"0.78rem",color:"#888"}}>{currentDSA.length} questions · Batch {activeBatch+1}/{Math.max(1,totalBatches)}</div>
+          </div>
+          {/* Day selector */}
+          <div style={{display:"flex",gap:"4px",flexWrap:"wrap",marginLeft:"auto"}}>
+            {STUDY_PLAN.map(d => {
+              const dp = dayProgress(d.day);
+              return (
+                <button key={d.day} onClick={()=>{setActiveDay(d.day);setActiveBatch(0);}} style={{width:"28px",height:"28px",borderRadius:"6px",border:`1px solid ${activeDay===d.day?d.color:"#2a2d3a"}`,background:activeDay===d.day?d.color+"22":"transparent",color:activeDay===d.day?d.color:"#666",fontSize:"0.72rem",fontWeight:700,cursor:"pointer"}}>
+                  {dp.done===dp.total&&dp.total>0?"✓":d.day}
+                </button>
+              );
+            })}
+          </div>
+        </div>
+
+        {/* Batch nav */}
+        {totalBatches > 1 && (
+          <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",background:"#1a1d27",borderRadius:"10px",padding:"10px 14px",marginBottom:"12px",border:"1px solid #1e2235"}}>
+            <span style={{fontSize:"0.8rem",color:"#888"}}>Questions {activeBatch*PER_BATCH+1}–{Math.min((activeBatch+1)*PER_BATCH,currentDSA.length)} of {currentDSA.length}</span>
+            <div style={{display:"flex",gap:"6px"}}>
+              <button style={{...S.btn("#636EFA","#1e2030","#636EFA"),opacity:activeBatch===0?0.3:1}} onClick={()=>activeBatch>0&&setActiveBatch(b=>b-1)}>← Prev</button>
+              <button style={{...S.btn("#00b8a3","#003d37","#00b8a3"),opacity:activeBatch>=totalBatches-1?0.3:1}} onClick={()=>activeBatch<totalBatches-1&&setActiveBatch(b=>b+1)}>Next →</button>
+            </div>
+          </div>
+        )}
+
+        {currentDSA.length === 0 && (
+          <div style={{textAlign:"center",padding:"40px",color:"#555"}}>No DS&A questions assigned to Day {activeDay}. Pick another day from the buttons above.</div>
+        )}
+
+        {dsaBatch.map((q,idx) => {
+          const [rank,lcNum,title,acceptance,difficulty,category,isOA] = q;
+          const qId = rank;
+          const status = answered[qId];
+          const hinted = expandedHints[qId];
+          const problemShown = expandedProblems[qId];
+          const catColor = CAT_COLORS[category] || "#888";
+          const slug = title.toLowerCase().replace(/[^a-z0-9]+/g,'-').replace(/^-|-$/g,'');
+          const lcUrl = `https://leetcode.com/problems/${slug}/`;
+          const oaData = OA_PROBLEMS[rank];
+
+          return (
+            <div key={rank} style={S.card(status)}>
+              <div style={{display:"flex",alignItems:"center",gap:"6px",marginBottom:"10px",flexWrap:"wrap"}}>
+                <span style={S.badge("#252836","#666")}>#{rank}</span>
+                {isOA ? <span style={S.badge("#FF97FF22","#FF97FF")}>🏢 OA</span>
+                      : <span style={S.badge("#636EFA22","#636EFA")}>LC {lcNum}</span>}
+                <span style={S.badge(DIFF_BG[difficulty],DIFF_COLOR[difficulty])}>{difficulty}</span>
+                <span style={S.badge(catColor+"22",catColor)}>{category}</span>
+                {status && <span style={{marginLeft:"auto"}}>{status==="solved"?"✅":status==="unsolved"?"❌":"⏭️"}</span>}
+              </div>
+              <div style={{fontSize:"0.97rem",fontWeight:700,color:"#fff",marginBottom:"8px"}}>{activeBatch*PER_BATCH+idx+1}. {title}</div>
+              <div style={{fontSize:"0.73rem",color:"#666",marginBottom:"10px"}}>Acceptance: {acceptance}</div>
+              <div style={{display:"flex",gap:"6px",flexWrap:"wrap"}}>
+                <button style={{...S.btn("#00b8a3",status==="solved"?"#004a38":"#003d37","#00b8a3")}} onClick={()=>mark(qId,"solved")}>✅ Solved</button>
+                <button style={{...S.btn("#ff375f",status==="unsolved"?"#4a0010":"#3d0010","#ff375f")}} onClick={()=>mark(qId,"unsolved")}>❌ Review</button>
+                <button style={{...S.btn("#ffc01e",status==="skip"?"#4a3a00":"#3d3200","#ffc01e")}} onClick={()=>mark(qId,"skip")}>⏭️ Skip</button>
+                <button style={S.btn("#636EFA","#1e2030","#636EFA")} onClick={()=>toggleHint(qId)}>{hinted?"🙈 Hint":"💡 Hint"}</button>
+                {isOA
+                  ? <button style={S.btn("#AB63FA","#1e2030","#AB63FA")} onClick={()=>toggleProblem(qId)}>{problemShown?"📕":"📖 Problem"}</button>
+                  : <a href={lcUrl} target="_blank" rel="noreferrer" style={{...S.btn("#FFA15A","#1e2030","#FFA15A"),textDecoration:"none"}}>🔗 LC</a>}
+              </div>
+              {problemShown && oaData && (
+                <div style={{marginTop:"10px",background:"#1a1535",borderRadius:"8px",padding:"12px",borderLeft:"3px solid #AB63FA",fontSize:"0.8rem",color:"#ccc",lineHeight:1.6}}>
+                  <strong style={{color:"#AB63FA"}}>📖 </strong>{oaData.desc}
+                </div>
+              )}
+              {hinted && (
+                <div style={{marginTop:"10px",background:"#1e2035",borderRadius:"8px",padding:"10px 12px",borderLeft:"3px solid #636EFA",fontSize:"0.8rem",color:"#ccc",lineHeight:1.6}}>
+                  <strong style={{color:"#636EFA"}}>💡 </strong>{isOA&&oaData?oaData.hint:(DSA_HINTS[lcNum]||"Check LeetCode editorial.")}
+                </div>
+              )}
+            </div>
+          );
+        })}
+      </div>
+    );
+  };
+
+  // ── CLASSES VIEW ──────────────────────────────────────────────────────────
+  const ClassesView = () => {
+    const dayData = STUDY_PLAN[activeDay-1];
+    return (
+      <div style={{padding:"16px 20px"}}>
+        <div style={{display:"flex",alignItems:"center",gap:"10px",marginBottom:"14px",flexWrap:"wrap"}}>
+          <div>
+            <div style={{fontSize:"1rem",fontWeight:700,color:"#fff"}}>⚙️ Classes &amp; Modularization — Day {activeDay}</div>
+            <div style={{fontSize:"0.78rem",color:"#888"}}>{currentClasses.length} problems · Paste solutions to Claude for review</div>
+          </div>
+          <div style={{display:"flex",gap:"4px",flexWrap:"wrap",marginLeft:"auto"}}>
+            {STUDY_PLAN.filter(d=>d.classes.length>0).map(d=>(
+              <button key={d.day} onClick={()=>{setActiveDay(d.day);setActiveBatch(0);}} style={{padding:"4px 8px",borderRadius:"6px",border:`1px solid ${activeDay===d.day?"#54A24B":"#2a2d3a"}`,background:activeDay===d.day?"#54A24B22":"transparent",color:activeDay===d.day?"#54A24B":"#666",fontSize:"0.72rem",fontWeight:700,cursor:"pointer"}}>D{d.day}</button>
+            ))}
+          </div>
+        </div>
+
+        <div style={{background:"#1a1d27",borderRadius:"10px",padding:"12px 14px",marginBottom:"14px",border:"1px solid #1e2235",fontSize:"0.8rem",color:"#aaa",lineHeight:1.6}}>
+          <strong style={{color:"#54A24B"}}>🎯 Amazon grades: </strong>Clear class boundaries · Single-responsibility methods · Encapsulated state · Domain-matching names · O(1) where possible
+        </div>
+
+        {currentClasses.length === 0 && (
+          <div style={{textAlign:"center",padding:"40px",color:"#555"}}>No Classes problems for Day {activeDay}. Select a day with Classes problems (D1–D5).</div>
+        )}
+
+        {currentClasses.map(p => {
+          const status = answered[p.id];
+          const hinted = expandedHints[p.id];
+          return (
+            <div key={p.id} style={S.card(status)}>
+              <div style={{display:"flex",alignItems:"center",gap:"6px",marginBottom:"10px",flexWrap:"wrap"}}>
+                <span style={S.badge("#252836","#666")}>{p.id}</span>
+                <span style={S.badge("#54A24B22","#54A24B")}>⚙️ Classes</span>
+                <span style={S.badge(DIFF_BG[p.difficulty],DIFF_COLOR[p.difficulty])}>{p.difficulty}</span>
+                <span style={S.badge("#19D3F322","#19D3F3")}>{p.focus}</span>
+                <span style={{fontSize:"0.68rem",color:"#555",marginLeft:"auto"}}>{p.source}</span>
+                {status && <span>{status==="solved"?"✅":status==="unsolved"?"❌":"⏭️"}</span>}
+              </div>
+              <div style={{fontSize:"0.97rem",fontWeight:700,color:"#fff",marginBottom:"10px"}}>{p.title}</div>
+              <div style={{fontSize:"0.78rem",color:"#888",marginBottom:"10px"}}>📋 Open classes_quiz.html for the full problem statement and examples.</div>
+              <div style={{display:"flex",gap:"6px",flexWrap:"wrap"}}>
+                <button style={{...S.btn("#00b8a3",status==="solved"?"#004a38":"#003d37","#00b8a3")}} onClick={()=>mark(p.id,"solved")}>✅ Solved</button>
+                <button style={{...S.btn("#ff375f",status==="unsolved"?"#4a0010":"#3d0010","#ff375f")}} onClick={()=>mark(p.id,"unsolved")}>❌ Review</button>
+                <button style={{...S.btn("#ffc01e",status==="skip"?"#4a3a00":"#3d3200","#ffc01e")}} onClick={()=>mark(p.id,"skip")}>⏭️ Skip</button>
+                <button style={S.btn("#54A24B","#1e2a1e","#54A24B")} onClick={()=>toggleHint(p.id)}>{hinted?"🙈 Hide":"💡 Hint"}</button>
+              </div>
+              {hinted && (
+                <div style={{marginTop:"10px",background:"#1e2a1e",borderRadius:"8px",padding:"10px 12px",borderLeft:"3px solid #54A24B",fontSize:"0.8rem",color:"#ccc",lineHeight:1.6}}>
+                  <strong style={{color:"#54A24B"}}>💡 Pattern: </strong>
+                  {{ C1:"Team + League classes. Cache best team in addMatch. findFirst() is O(1) — never scan.",
+                     C2:"Task dataclass + Scheduler class with heapq. tick() reduces remaining, pop on completion.",
+                     C3:"DeliveryPoint + Zone (owns centroid calc) + DeliveryNetwork coordinator.",
+                     C4:"Log dataclass + WarehouseAllocator. bisect.insort for sorted parts. canFulfillOrder checks len().",
+                     C5:"Server dataclass + per-type min-heap. _get_heap(type) helper. Compute cost before dealloc.",
+                     C6:"Sort by security level. Optimal contiguous grouping. _partition_into_k() as separate method.",
+                     C7:"DiscountRule dataclass. PricingEngine.applyRules() pipelines rules sequentially.",
+                     C8:"CacheStore (LRU) + AccessTracker (stats) as separate classes. AnalyticsLRUCache composes both.",
+                     C9:"Order dataclass + OrderStateMachine (transitions dict) + OrderSystem coordinator.",
+                     C10:"Product dataclass with needs_reorder property. _check_reorder() private helper after sell().",
+                  }[p.id] || "Design with clear class boundaries and single-responsibility methods."}
+                </div>
+              )}
+            </div>
+          );
+        })}
+      </div>
+    );
+  };
+
+  // ── LOGICAL VIEW ──────────────────────────────────────────────────────────
+  const LogicalView = () => {
+    return (
+      <div style={{padding:"16px 20px"}}>
+        <div style={{display:"flex",alignItems:"center",gap:"10px",marginBottom:"14px",flexWrap:"wrap"}}>
+          <div>
+            <div style={{fontSize:"1rem",fontWeight:700,color:"#fff"}}>🧹 Logical &amp; Maintainable — Day {activeDay}</div>
+            <div style={{fontSize:"0.78rem",color:"#888"}}>{currentLogical.length} problems · Code quality over correctness</div>
+          </div>
+          <div style={{display:"flex",gap:"4px",flexWrap:"wrap",marginLeft:"auto"}}>
+            {STUDY_PLAN.filter(d=>d.logical.length>0).map(d=>(
+              <button key={d.day} onClick={()=>{setActiveDay(d.day);setActiveBatch(0);}} style={{padding:"4px 8px",borderRadius:"6px",border:`1px solid ${activeDay===d.day?"#FF6692":"#2a2d3a"}`,background:activeDay===d.day?"#FF669222":"transparent",color:activeDay===d.day?"#FF6692":"#666",fontSize:"0.72rem",fontWeight:700,cursor:"pointer"}}>D{d.day}</button>
+            ))}
+          </div>
+        </div>
+
+        <div style={{background:"#1a1d27",borderRadius:"10px",padding:"12px 14px",marginBottom:"14px",border:"1px solid #1e2235",fontSize:"0.8rem",color:"#aaa",lineHeight:1.6}}>
+          <strong style={{color:"#FF6692"}}>🎯 Amazon grades: </strong>Meaningful names · Short functions · Guard clauses · No duplication · Complexity comment · Reads on first pass
+        </div>
+
+        {currentLogical.length === 0 && (
+          <div style={{textAlign:"center",padding:"40px",color:"#555"}}>No L&M problems for Day {activeDay}. Select a day with L&M problems (D1–D4).</div>
+        )}
+
+        {currentLogical.map(p => {
+          const status = answered[p.id];
+          const hinted = expandedHints[p.id];
+          return (
+            <div key={p.id} style={S.card(status)}>
+              <div style={{display:"flex",alignItems:"center",gap:"6px",marginBottom:"10px",flexWrap:"wrap"}}>
+                <span style={S.badge("#252836","#666")}>{p.id}</span>
+                <span style={S.badge("#FF669222","#FF6692")}>🧹 L&M</span>
+                <span style={S.badge(DIFF_BG[p.difficulty],DIFF_COLOR[p.difficulty])}>{p.difficulty}</span>
+                <span style={S.badge("#AB63FA22","#AB63FA")}>{p.focus}</span>
+                <span style={{fontSize:"0.68rem",color:"#555",marginLeft:"auto"}}>{p.source}</span>
+                {status && <span>{status==="solved"?"✅":status==="unsolved"?"❌":"⏭️"}</span>}
+              </div>
+              <div style={{fontSize:"0.97rem",fontWeight:700,color:"#fff",marginBottom:"10px"}}>{p.title}</div>
+              <div style={{fontSize:"0.78rem",color:"#888",marginBottom:"10px"}}>📋 Open logical_quiz.html for the full problem statement, bad example, and Amazon signal.</div>
+              <div style={{display:"flex",gap:"6px",flexWrap:"wrap"}}>
+                <button style={{...S.btn("#00b8a3",status==="solved"?"#004a38":"#003d37","#00b8a3")}} onClick={()=>mark(p.id,"solved")}>✅ Solved</button>
+                <button style={{...S.btn("#ff375f",status==="unsolved"?"#4a0010":"#3d0010","#ff375f")}} onClick={()=>mark(p.id,"unsolved")}>❌ Review</button>
+                <button style={{...S.btn("#ffc01e",status==="skip"?"#4a3a00":"#3d3200","#ffc01e")}} onClick={()=>mark(p.id,"skip")}>⏭️ Skip</button>
+                <button style={S.btn("#FF6692","#2a1020","#FF6692")} onClick={()=>toggleHint(p.id)}>{hinted?"🙈 Hide":"💡 Hint"}</button>
+              </div>
+              {hinted && (
+                <div style={{marginTop:"10px",background:"#2a1020",borderRadius:"8px",padding:"10px 12px",borderLeft:"3px solid #FF6692",fontSize:"0.8rem",color:"#ccc",lineHeight:1.6}}>
+                  <strong style={{color:"#FF6692"}}>💡 Key: </strong>
+                  {{ L1:"Three separate helpers: is_case_insensitive_match, is_prefix_within_tolerance, differs_by_one_allowed_char. Main fn only calls these.",
+                     L2:"Dispatcher dict HANDLERS={'ADD':handle_add,...}. Each handler is a separate function. No if/elif chain.",
+                     L3:"One private method per step: _check_length, _check_character_format, _check_digit_sum, _check_letter_checksum, _check_parity. validate() loops through them.",
+                     L4:"De-duplicate pool. RuleChecker class with list of (type,val). check(password) iterates cleanly.",
+                     L5:"JOIN + GROUP BY region. SUM(CASE WHEN status='X' THEN weight ELSE 0 END). HAVING COUNT(*)>=5.",
+                     L6:"_validate_user() guard at top of every public method. _prune_expired() as private helper. UserRateConfig + UserRateState dataclasses.",
+                     L7:"One _check_X() method per rule, each returns List[str] of errors. validate() calls all 5 and collects. Return ALL errors not just first.",
+                     L8:"MetricSeries owns data. StatsCalculator has static compute methods. MetricsAggregator delegates to both.",
+                  }[p.id] || "Separate helpers, guard clauses, meaningful names, complexity comment."}
+                </div>
+              )}
+            </div>
+          );
+        })}
+      </div>
+    );
+  };
+
+  // ── TOPBAR ────────────────────────────────────────────────────────────────
+  const Topbar = () => (
+    <div style={S.topbar}>
+      <div style={{fontSize:"0.9rem",fontWeight:700,color:"#fff"}}>
+        {view==="plan"?"📅 Study Plan":view==="dsa"?"🚀 DS&A Quiz":view==="classes"?"⚙️ Classes & Modularization":"🧹 Logical & Maintainable"}
+      </div>
+      <div style={{marginLeft:"auto",display:"flex",gap:"8px",alignItems:"center",flexWrap:"wrap"}}>
+        {/* Overall mini progress */}
+        <div style={{display:"flex",gap:"10px",alignItems:"center",fontSize:"0.75rem"}}>
+          <span style={{color:"#636EFA",fontWeight:600}}>DS&A {dsaDone}/{dsaTotal}</span>
+          <span style={{color:"#54A24B",fontWeight:600}}>⚙️ {classDone}/{classTotal}</span>
+          <span style={{color:"#FF6692",fontWeight:600}}>🧹 {logicDone}/{logicTotal}</span>
+        </div>
+        <div style={{background:"#252836",borderRadius:"6px",height:"5px",width:"100px",overflow:"hidden"}}>
+          <div style={{height:"100%",width:`${pct([grandDone,grandTotal])}%`,background:"linear-gradient(90deg,#636EFA,#EF553B)",borderRadius:"6px"}}/>
+        </div>
+        <span style={{fontSize:"0.75rem",color:"#888"}}>{grandDone}/{grandTotal}</span>
+      </div>
+    </div>
+  );
+
+  return (
+    <div style={S.layout}>
+      <Sidebar/>
+      <div style={S.main}>
+        <Topbar/>
+        {view==="plan" && <PlanView/>}
+        {view==="dsa" && <DSAView/>}
+        {view==="classes" && <ClassesView/>}
+        {view==="logical" && <LogicalView/>}
+      </div>
+    </div>
+  );
+}
+
+ReactDOM.createRoot(document.getElementById("root")).render(<App/>);
+</script>
+</body>
+</html>

@@ -1,0 +1,284 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>📅 9-Day Amazon Prep Plan</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/react/18.2.0/umd/react.production.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.2.0/umd/react-dom.production.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/babel-standalone/7.23.2/babel.min.js"></script>
+<style>*{margin:0;padding:0;box-sizing:border-box;}body{background:#0f1117;}::-webkit-scrollbar{width:6px;}::-webkit-scrollbar-track{background:#1a1d27;}::-webkit-scrollbar-thumb{background:#636EFA55;border-radius:3px;}</style>
+</head>
+<body>
+<div id="root"></div>
+<script type="text/babel">
+const { useState } = React;
+
+const DAYS = [
+  {
+    day: 1, date: "Sat Apr 19", theme: "Foundation",
+    dsa: { count: 10, focus: "Arrays/Hashing + Sliding Window (most frequent categories)", batches: "Batches 1–2 of dsalgo_quiz.html" },
+    classes: { count: 2, focus: "Team Ranking System + Optimal Task Scheduling", note: "Classes 1–2" },
+    logical: { count: 2, focus: "Check Similar Passwords + Process Queries on Cart", note: "L&M 1–2" },
+    schedule: [
+      { time: "9:00–10:30", block: "DS&A", desc: "Arrays/Hashing batch 1 (Q1–Q5): Two Sum, Sliding Window, Trapping Rain, LRU, Container Water" },
+      { time: "10:30–12:00", block: "DS&A", desc: "Arrays/Hashing batch 2 (Q6–Q10): Add Two Numbers, LCP, Best Time Stock, Palindrome, 3Sum" },
+      { time: "12:00–13:00", block: "BREAK", desc: "Lunch + rest" },
+      { time: "13:00–14:30", block: "Classes", desc: "Team Ranking System — write full League + Team classes, test addMatch/findFirst" },
+      { time: "14:30–16:00", block: "L&M", desc: "Check Similar Passwords — write 3 separate helpers, no inline logic" },
+      { time: "16:00–17:00", block: "Review", desc: "Paste both custom solutions to Claude, fix issues, re-read Amazon's rubric checklist" },
+    ]
+  },
+  {
+    day: 2, date: "Sun Apr 20", theme: "Graphs + Design",
+    dsa: { count: 10, focus: "Graph/BFS/DFS + Binary Search", batches: "Batches 3–4 of dsalgo_quiz.html" },
+    classes: { count: 2, focus: "Deliver Zones + Warehouse Distribution", note: "Classes 3–4" },
+    logical: { count: 2, focus: "Checksum Logic + Count Distinct Passwords", note: "L&M 3–4" },
+    schedule: [
+      { time: "9:00–10:30", block: "DS&A", desc: "Graph batch: Number of Islands, Koko Bananas, Merge Intervals, Group Anagrams, Merge k Lists" },
+      { time: "10:30–12:00", block: "DS&A", desc: "Binary Search batch: Majority Element, Longest Consecutive, Subarray Sum, Palindrome, Valid Parens" },
+      { time: "12:00–13:00", block: "BREAK", desc: "Lunch + rest" },
+      { time: "13:00–14:30", block: "Classes", desc: "Deliver Zones — DeliveryNetwork + Zone + DeliveryPoint classes" },
+      { time: "14:30–16:00", block: "L&M", desc: "Checksum Logic — TrackingCodeValidator with 5 private _check_X methods" },
+      { time: "16:00–17:00", block: "Review", desc: "Paste to Claude, get feedback, review any DS&A hints you used today" },
+    ]
+  },
+  {
+    day: 3, date: "Mon Apr 21", theme: "Trees + OA DS&A",
+    dsa: { count: 10, focus: "Trees + OA custom problems (Min Cost Roads, DNA Sequence)", batches: "Batches 5–6 + OA questions" },
+    classes: { count: 2, focus: "Server Instance Allocation + Server Security Grouping", note: "Classes 5–6" },
+    logical: { count: 2, focus: "Rate Limiter + Customer Package SQL", note: "L&M 5–6" },
+    schedule: [
+      { time: "9:00–10:30", block: "DS&A", desc: "Trees batch: LCA, Generate Parens, Letter Combos, Merge Lists, Climbing Stairs" },
+      { time: "10:30–12:00", block: "DS&A OA", desc: "Amazon OA: Min Cost Roads (Union-Find+Kruskal) + Get DNA Sequence (sliding window hash)" },
+      { time: "12:00–13:00", block: "BREAK", desc: "Lunch + rest" },
+      { time: "13:00–14:30", block: "Classes", desc: "Server Instance Allocation — ServerPool with per-type heaps, Server dataclass" },
+      { time: "14:30–16:00", block: "L&M", desc: "Rate Limiter — RateLimiter with UserRateConfig + UserRateState, guard clauses everywhere" },
+      { time: "16:00–17:00", block: "Review", desc: "Paste to Claude, compare with solutions.html, note patterns you missed" },
+    ]
+  },
+  {
+    day: 4, date: "Tue Apr 22", theme: "Dynamic Programming",
+    dsa: { count: 10, focus: "DP (largest category gap to fill)", batches: "Batches 7–8 of dsalgo_quiz.html" },
+    classes: { count: 2, focus: "Calculate Final Prices + Event-Driven Orders", note: "Classes 7–9" },
+    logical: { count: 2, focus: "Flight Itinerary + Metrics Aggregator", note: "L&M 7–8" },
+    schedule: [
+      { time: "9:00–10:30", block: "DS&A", desc: "DP batch 1: Single Number, Find Peak, Rotting Oranges, Search Rotated, Sqrt(x)" },
+      { time: "10:30–12:00", block: "DS&A", desc: "DP batch 2: Fruit Baskets, First Missing Positive, Max Subarray, LCA Tree, Sliding Window Max" },
+      { time: "12:00–13:00", block: "BREAK", desc: "Lunch + rest" },
+      { time: "13:00–14:30", block: "Classes", desc: "Pricing Engine — PricingEngine + DiscountRule, pipeline apply pattern" },
+      { time: "14:30–16:00", block: "L&M", desc: "Flight Itinerary Validator — ItineraryValidator with 5 separate _check_X methods" },
+      { time: "16:00–17:00", block: "Review", desc: "Focus: are your DP solutions truly clean? Meaningful variable names? Complexity comments?" },
+    ]
+  },
+  {
+    day: 5, date: "Wed Apr 23", theme: "Stack + OA problems",
+    dsa: { count: 10, focus: "Stack/Monotonic Stack + Sorting/Greedy", batches: "Batches 9–10" },
+    classes: { count: 1, focus: "Inventory Management", note: "Classes 10" },
+    logical: { count: 1, focus: "Metrics Aggregator", note: "L&M 8" },
+    schedule: [
+      { time: "9:00–10:30", block: "DS&A", desc: "Stack batch: Concatenation Array, Word Search, N-Queens, Merge Sorted, Reorganize String" },
+      { time: "10:30–12:00", block: "DS&A OA", desc: "OA problems: Get Number of Teams (sort+2ptr) + Distribute Parcels (binary search on answer)" },
+      { time: "12:00–13:00", block: "BREAK", desc: "Lunch + rest" },
+      { time: "13:00–14:30", block: "Classes", desc: "Inventory Manager — Product dataclass, reorder property, InventoryManager with guard helpers" },
+      { time: "14:30–16:00", block: "L&M", desc: "Metrics Aggregator — MetricSeries + StatsCalculator + MetricsAggregator triple separation" },
+      { time: "16:00–17:00", block: "Review", desc: "Spot-check: open solutions.html, compare approach, identify 1-2 patterns to improve" },
+    ]
+  },
+  {
+    day: 6, date: "Thu Apr 24", theme: "Mixed + OA Remaining",
+    dsa: { count: 12, focus: "Remaining OA DS&A problems + Backtracking", batches: "Batches 11–12 + all remaining OA" },
+    classes: { count: 0, focus: "Review + strengthen weakest Classes problem", note: "Re-attempt lowest-confidence problem" },
+    logical: { count: 0, focus: "Review + re-attempt weakest L&M problem", note: "Polish your worst solution" },
+    schedule: [
+      { time: "9:00–10:30", block: "DS&A OA", desc: "OA: Max Precipitation + Get Max Greyness + Find Min Load Index" },
+      { time: "10:30–12:00", block: "DS&A OA", desc: "OA: Execute Processes + Make Array Positive + Server Security Grouping + Max Bandwidth" },
+      { time: "12:00–13:00", block: "BREAK", desc: "Lunch + rest" },
+      { time: "13:00–14:30", block: "Classes Review", desc: "Re-solve your weakest Classes problem from memory, no hints" },
+      { time: "14:30–16:00", block: "L&M Review", desc: "Re-solve your weakest L&M problem from memory, compare with solutions.html" },
+      { time: "16:00–17:00", block: "Mixed", desc: "3 random LC problems from dsalgo_quiz (pick ones marked Review)" },
+    ]
+  },
+  {
+    day: 7, date: "Fri Apr 25", theme: "Speed + Timed Practice",
+    dsa: { count: 10, focus: "Timed: 30 min per problem — simulate OA pressure", batches: "Pick from Review-marked items" },
+    classes: { count: 2, focus: "Timed: 45 min each — full class design under time pressure", note: "Pick 2 hardest" },
+    logical: { count: 2, focus: "Timed: 30 min each — focus on structure over correctness first", note: "Pick 2 hardest" },
+    schedule: [
+      { time: "9:00–10:30", block: "Timed DS&A", desc: "Set 30-min timer for each: do 3 problems from your Review list" },
+      { time: "10:30–12:00", block: "Timed DS&A", desc: "3 more timed problems — focus on explaining complexity out loud" },
+      { time: "12:00–13:00", block: "BREAK", desc: "Lunch + rest" },
+      { time: "13:00–14:30", block: "Timed Classes", desc: "45-min timer: Team Ranking System from scratch, no hints" },
+      { time: "14:30–16:00", block: "Timed L&M", desc: "45-min timer: Check Similar Passwords — perfect decomposition" },
+      { time: "16:00–17:00", block: "Review", desc: "Review all remaining dsalgo_quiz Review items — read hints, understand patterns" },
+    ]
+  },
+  {
+    day: 8, date: "Sat Apr 26", theme: "Final Gaps",
+    dsa: { count: 8, focus: "All remaining Review-marked DS&A problems", batches: "From progress page" },
+    classes: { count: 2, focus: "LRU Analytics + any unsolved Classes problem", note: "Focus on ones marked Review" },
+    logical: { count: 2, focus: "Any unsolved L&M problems", note: "Focus on ones marked Review" },
+    schedule: [
+      { time: "9:00–11:00", block: "DS&A Review", desc: "Work through every problem still marked Review in dsalgo_quiz — read solution, understand it, close the tab, rewrite" },
+      { time: "11:00–12:00", block: "Classes Review", desc: "AnalyticsLRUCache — verify your CacheStore + AccessTracker separation is clean" },
+      { time: "12:00–13:00", block: "BREAK", desc: "Lunch + rest" },
+      { time: "13:00–14:30", block: "L&M Review", desc: "Re-read Amazon signal for each L&M problem — do your solutions match?" },
+      { time: "14:30–16:00", block: "Full Simulation", desc: "Simulate the OA: pick 2 problems you haven't seen in 3+ days, 45 min each, no hints" },
+      { time: "16:00–17:00", block: "Prep", desc: "Write down your top 5 most-confident approaches to reference mentally tomorrow" },
+    ]
+  },
+  {
+    day: 9, date: "Sun Apr 27", theme: "Light Review + Rest",
+    dsa: { count: 3, focus: "Only your 3 highest-frequency categories — quick scan only", batches: "Easy/Medium only" },
+    classes: { count: 1, focus: "Read your best Classes solution — internalize the pattern", note: "No new problems" },
+    logical: { count: 1, focus: "Read your best L&M solution — internalize the checklist", note: "No new problems" },
+    schedule: [
+      { time: "9:00–10:00", block: "Light DS&A", desc: "Quick-read 3 top frequency problems — Arrays, DP, Graph. No new problems. Just recall." },
+      { time: "10:00–11:00", block: "Mental Checklist", desc: "Write the 5 things Amazon scores on for Classes & Mod. Write the 7 things for L&M. From memory." },
+      { time: "11:00–12:00", block: "Rest", desc: "Stop coding. Walk, eat well, sleep early. Your prep is done." },
+    ]
+  },
+];
+
+const BLOCK_COLORS = {
+  "DS&A":          { bg:"#1e2535", border:"#636EFA", text:"#636EFA" },
+  "DS&A OA":       { bg:"#1e1535", border:"#AB63FA", text:"#AB63FA" },
+  "Classes":       { bg:"#1e2a1e", border:"#54A24B", text:"#54A24B" },
+  "Classes Review":{ bg:"#1e2a1e", border:"#54A24B", text:"#54A24B" },
+  "L&M":           { bg:"#2a1020", border:"#FF6692", text:"#FF6692" },
+  "L&M Review":    { bg:"#2a1020", border:"#FF6692", text:"#FF6692" },
+  "Review":        { bg:"#2a2010", border:"#FECB52", text:"#FECB52" },
+  "Mixed":         { bg:"#1a2030", border:"#19D3F3", text:"#19D3F3" },
+  "Timed DS&A":    { bg:"#1e2535", border:"#636EFA", text:"#636EFA" },
+  "Timed Classes": { bg:"#1e2a1e", border:"#54A24B", text:"#54A24B" },
+  "Timed L&M":     { bg:"#2a1020", border:"#FF6692", text:"#FF6692" },
+  "Full Simulation":{ bg:"#2a1535", border:"#FF97FF", text:"#FF97FF" },
+  "BREAK":         { bg:"#1a1d27", border:"#444", text:"#666" },
+  "Mental Checklist":{ bg:"#2a2a10", border:"#FECB52", text:"#FECB52" },
+  "Light DS&A":    { bg:"#1e2535", border:"#636EFA", text:"#636EFA" },
+  "Prep":          { bg:"#1a2030", border:"#19D3F3", text:"#19D3F3" },
+  "Rest":          { bg:"#1a1d27", border:"#333", text:"#555" },
+};
+
+function StudyPlan() {
+  const [expanded, setExpanded] = useState({});
+  const toggle = d => setExpanded(p=>({...p,[d]:!p[d]}));
+  const today = new Date();
+  const startDate = new Date("2025-04-19");
+
+  return (
+    <div style={{minHeight:"100vh",background:"linear-gradient(135deg,#0f1117,#1a1d27)",color:"#e0e0e0",fontFamily:"'Segoe UI',Arial,sans-serif"}}>
+      <div style={{background:"#1a1d27",borderBottom:"1px solid #2a2d3a",padding:"14px 24px",display:"flex",alignItems:"center",justifyContent:"space-between",flexWrap:"wrap",gap:"10px",position:"sticky",top:0,zIndex:100}}>
+        <div style={{fontSize:"1.15rem",fontWeight:700,color:"#fff"}}>📅 9-Day Amazon Prep Plan</div>
+        <div style={{fontSize:"0.83rem",color:"#aaa"}}>Apr 19 – Apr 27 · Interview Apr 28 · 4 hrs/day</div>
+      </div>
+
+      <div style={{maxWidth:"900px",margin:"0 auto",padding:"22px 14px"}}>
+
+        {/* File links */}
+        <div style={{background:"#1a1d27",borderRadius:"12px",padding:"16px 18px",marginBottom:"20px",border:"1px solid #2a2d3a"}}>
+          <div style={{fontWeight:700,color:"#fff",marginBottom:"12px"}}>📂 Your Files — Open These Daily</div>
+          <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(200px,1fr))",gap:"10px"}}>
+            {[
+              ["🚀 DS&A Quiz","dsalgo_quiz.html","#636EFA"],
+              ["⚙️ Classes Quiz","classes_quiz.html","#54A24B"],
+              ["🧹 L&M Quiz","logical_quiz.html","#FF6692"],
+              ["📚 Solutions","solutions.html","#FECB52"],
+            ].map(([label,file,color])=>(
+              <div key={file} style={{background:color+"11",border:`1px solid ${color}44`,borderRadius:"10px",padding:"12px",textAlign:"center"}}>
+                <div style={{fontWeight:700,color:color,fontSize:"0.88rem",marginBottom:"4px"}}>{label}</div>
+                <div style={{fontSize:"0.73rem",color:"#888"}}>{file}</div>
+              </div>
+            ))}
+          </div>
+          <div style={{marginTop:"14px",fontSize:"0.82rem",color:"#888",lineHeight:1.7}}>
+            <strong style={{color:"#FECB52"}}>Workflow:</strong> Open quiz → Read problem → Write solution in your editor → If custom problem, paste to Claude → Mark status → Move to next batch.<br/>
+            <strong style={{color:"#ff375f"}}>Rule:</strong> Don't check solutions.html until after you've genuinely attempted the problem.
+          </div>
+        </div>
+
+        {/* Day cards */}
+        {DAYS.map(d => {
+          const isOpen = expanded[d.day];
+          const totalQ = d.dsa.count + d.classes.count + d.logical.count;
+          const isLightDay = d.day === 9;
+          return (
+            <div key={d.day} style={{background:"#1a1d27",borderRadius:"14px",marginBottom:"12px",border:"1px solid #2a2d3a",overflow:"hidden"}}>
+              <div
+                style={{padding:"16px 18px",cursor:"pointer",display:"flex",alignItems:"center",gap:"12px",flexWrap:"wrap"}}
+                onClick={()=>toggle(d.day)}
+              >
+                <div style={{background:"#252836",borderRadius:"10px",padding:"8px 14px",textAlign:"center",minWidth:"60px"}}>
+                  <div style={{fontSize:"1.1rem",fontWeight:800,color:"#fff"}}>D{d.day}</div>
+                  <div style={{fontSize:"0.68rem",color:"#666"}}>{d.date.split(" ").slice(0,2).join(" ")}</div>
+                </div>
+                <div style={{flex:1}}>
+                  <div style={{fontWeight:700,color:"#fff",fontSize:"0.97rem"}}>{d.date} — <span style={{color:"#636EFA"}}>{d.theme}</span></div>
+                  <div style={{fontSize:"0.78rem",color:"#777",marginTop:"4px"}}>{d.dsa.focus}</div>
+                </div>
+                <div style={{display:"flex",gap:"8px",flexWrap:"wrap",alignItems:"center"}}>
+                  <span style={{background:"#636EFA22",color:"#636EFA",padding:"3px 8px",borderRadius:"6px",fontSize:"0.73rem",fontWeight:600}}>🚀 {d.dsa.count} DS&A</span>
+                  <span style={{background:"#54A24B22",color:"#54A24B",padding:"3px 8px",borderRadius:"6px",fontSize:"0.73rem",fontWeight:600}}>⚙️ {d.classes.count} Classes</span>
+                  <span style={{background:"#FF669222",color:"#FF6692",padding:"3px 8px",borderRadius:"6px",fontSize:"0.73rem",fontWeight:600}}>🧹 {d.logical.count} L&M</span>
+                  <span style={{color:"#888",fontSize:"0.75rem"}}>{isOpen?"▲":"▼"}</span>
+                </div>
+              </div>
+
+              {isOpen&&(
+                <div style={{padding:"0 18px 18px"}}>
+                  <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(250px,1fr))",gap:"10px",marginBottom:"14px"}}>
+                    <div style={{background:"#636EFA11",borderRadius:"10px",padding:"12px",border:"1px solid #636EFA33"}}>
+                      <div style={{fontWeight:700,color:"#636EFA",fontSize:"0.82rem",marginBottom:"4px"}}>🚀 DS&A ({d.dsa.count}Q)</div>
+                      <div style={{fontSize:"0.8rem",color:"#ccc"}}>{d.dsa.focus}</div>
+                      <div style={{fontSize:"0.74rem",color:"#888",marginTop:"4px"}}>{d.dsa.batches}</div>
+                    </div>
+                    <div style={{background:"#54A24B11",borderRadius:"10px",padding:"12px",border:"1px solid #54A24B33"}}>
+                      <div style={{fontWeight:700,color:"#54A24B",fontSize:"0.82rem",marginBottom:"4px"}}>⚙️ Classes ({d.classes.count})</div>
+                      <div style={{fontSize:"0.8rem",color:"#ccc"}}>{d.classes.focus}</div>
+                      <div style={{fontSize:"0.74rem",color:"#888",marginTop:"4px"}}>{d.classes.note}</div>
+                    </div>
+                    <div style={{background:"#FF669211",borderRadius:"10px",padding:"12px",border:"1px solid #FF669233"}}>
+                      <div style={{fontWeight:700,color:"#FF6692",fontSize:"0.82rem",marginBottom:"4px"}}>🧹 L&M ({d.logical.count})</div>
+                      <div style={{fontSize:"0.8rem",color:"#ccc"}}>{d.logical.focus}</div>
+                      <div style={{fontSize:"0.74rem",color:"#888",marginTop:"4px"}}>{d.logical.note}</div>
+                    </div>
+                  </div>
+
+                  <div style={{fontWeight:700,color:"#fff",fontSize:"0.85rem",marginBottom:"10px"}}>⏰ Hourly Schedule</div>
+                  {d.schedule.map((slot,i)=>{
+                    const sc = BLOCK_COLORS[slot.block] || {bg:"#1a1d27",border:"#444",text:"#888"};
+                    return (
+                      <div key={i} style={{display:"flex",gap:"10px",marginBottom:"8px",alignItems:"flex-start"}}>
+                        <div style={{minWidth:"100px",fontSize:"0.74rem",color:"#888",fontWeight:600,paddingTop:"8px"}}>{slot.time}</div>
+                        <div style={{flex:1,background:sc.bg,borderLeft:`3px solid ${sc.border}`,borderRadius:"8px",padding:"8px 12px"}}>
+                          <span style={{fontWeight:700,color:sc.text,fontSize:"0.78rem",marginRight:"8px"}}>[{slot.block}]</span>
+                          <span style={{fontSize:"0.8rem",color:"#ccc"}}>{slot.desc}</span>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
+          );
+        })}
+
+        {/* Interview day reminder */}
+        <div style={{background:"linear-gradient(135deg,#1a0f20,#1a2d45)",border:"2px solid #636EFA",borderRadius:"16px",padding:"24px",textAlign:"center",marginTop:"10px"}}>
+          <div style={{fontSize:"2rem",marginBottom:"8px"}}>🎯</div>
+          <div style={{fontSize:"1.3rem",fontWeight:800,color:"#fff",marginBottom:"8px"}}>Interview Day — Mon Apr 28</div>
+          <div style={{fontSize:"0.88rem",color:"#aaa",lineHeight:1.8}}>
+            Before the OA: State your approach, complexity, and data structures BEFORE writing code.<br/>
+            Use meaningful names. Write guard clauses first. Add complexity comment at end.<br/>
+            <strong style={{color:"#636EFA"}}>Passing all tests ≠ passing the bar. Code quality is scored separately.</strong>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+ReactDOM.createRoot(document.getElementById("root")).render(<StudyPlan/>);
+</script>
+</body>
+</html>
